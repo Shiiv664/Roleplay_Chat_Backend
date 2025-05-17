@@ -5,7 +5,7 @@
 - Establish coding principles and standards (completed in AI_Coding_Principles.md)
 - Create database schema (completed in database_schema.sql)
 
-## Phase 2: Technical Architecture Design (completed in technical_architecture.sql)
+## Phase 2: Technical Architecture Design (completed in technical_architecture.md)
 - Design detailed backend architecture
   - SQLAlchemy ORM models
   - Repository pattern for data access
@@ -20,18 +20,18 @@
 - Document API endpoints
 
 ## Phase 3: Database & Backend Foundation
-- Implement database setup with SQLAlchemy ORM
-- Create SQLAlchemy models for all entities
-- Implement repository pattern for database access
+- Implement database setup with SQLAlchemy ORM (follow structure in technical_architecture.md)
+- Create SQLAlchemy models for all entities (implement models as designed in technical_architecture.md)
+- Implement repository pattern for database access (follow patterns in technical_architecture.md)
 - Implement basic service layer functionality
-- Develop core API endpoints for CRUD operations
+- Develop core API endpoints for CRUD operations (based on API endpoints in technical_architecture.md)
 - Set up error handling and logging system
 - Implement authentication foundation (if needed)
 
 ## Phase 4: Frontend Foundation
-- Set up basic frontend structure and build pipeline
-- Develop reusable UI components
-- Implement API client for backend communication
+- Set up basic frontend structure and build pipeline (follow directory structure in technical_architecture.md)
+- Develop reusable UI components (as specified in technical_architecture.md)
+- Implement API client for backend communication (based on API client designs in technical_architecture.md)
 - Create base page templates
 - Implement routing system
 
