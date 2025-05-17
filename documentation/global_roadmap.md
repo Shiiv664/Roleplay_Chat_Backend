@@ -1,11 +1,11 @@
 # Global Project Roadmap: Roleplay Chat Web App
 
-## Phase 1: Project Definition & Planning
+## Phase 1: Project Definition & Planning (completed)
 - Define project scope and requirements (completed in Project_Description.md)
 - Establish coding principles and standards (completed in AI_Coding_Principles.md)
 - Create database schema (completed in database_schema.sql)
 
-## Phase 2: Technical Architecture Design
+## Phase 2: Technical Architecture Design (completed in technical_architecture.sql)
 - Design detailed backend architecture
   - SQLAlchemy ORM models
   - Repository pattern for data access
