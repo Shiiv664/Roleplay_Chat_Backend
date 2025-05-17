@@ -13,8 +13,8 @@ Follow these principles when modifying or adding code:
 
 ## Development Approach
 
-The development of this project strictly follows a roadmap-first approach:
-1. Roadmap files are created before any coding begins
-2. The coding phase must follow the roadmap closely
-3. Any deviations from the roadmap must be discussed and documented
-4. Roadmap files serve as the source of truth for development priorities and direction
+The development of this project follows a flexible approach:
+1. I work independently and do not require formal milestones, deliverables, or strict timelines
+2. Focus is on quality code and iterative development
+3. Roadmaps are helpful as general guidance but not as rigid constraints, except when technical descriptions are provided
+4. Adaptability and creative problem-solving are prioritized over bureaucratic processes
