@@ -4,8 +4,6 @@
 - Define project scope and requirements (completed in Project_Description.md)
 - Establish coding principles and standards (completed in AI_Coding_Principles.md)
 - Create database schema (completed in database_schema.sql)
-- Develop this global roadmap document
-- Define project milestones and timeline
 
 ## Phase 2: Technical Architecture Design
 - Design detailed backend architecture
