@@ -7,7 +7,8 @@
 
 ## Phase 2: Technical Architecture Design
 - Design detailed backend architecture
-  - Data Access Layer (DAL)
+  - SQLAlchemy ORM models
+  - Repository pattern for data access
   - Service Layer
   - API Layer
 - Design frontend architecture
@@ -19,8 +20,9 @@
 - Document API endpoints
 
 ## Phase 3: Database & Backend Foundation
-- Implement database setup and initialization script
-- Create DAL modules for all database entities
+- Implement database setup with SQLAlchemy ORM
+- Create SQLAlchemy models for all entities
+- Implement repository pattern for database access
 - Implement basic service layer functionality
 - Develop core API endpoints for CRUD operations
 - Set up error handling and logging system

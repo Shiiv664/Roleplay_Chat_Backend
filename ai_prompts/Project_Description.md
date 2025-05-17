@@ -15,7 +15,7 @@ The primary function of the application is to enable users to:
 
 ## 3. Technology Stack
 
--   **Backend:** Python, Flask
+-   **Backend:** Python, Flask, SQLAlchemy ORM
 -   **Database:** SQLite
 -   **Frontend:** HTML, JavaScript, CSS
 -   **AI Interaction:** OpenRouter API (or similar)
