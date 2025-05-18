@@ -21,19 +21,26 @@
 
 ## Phase 3: Database & Backend Foundation
 - Implement database setup with SQLAlchemy ORM (follow structure in technical_architecture.md)
+  - Apply database schema evolution strategy (outlined in database_schema_evolution_strategy.md)
+  - Configure Alembic for migrations following best practices
 - Create SQLAlchemy models for all entities (implement models as designed in technical_architecture.md)
   - Write unit tests for models (following testing_strategy.md)
+  - Implement performance optimizations (following performance_optimization_strategy.md)
 - Implement repository pattern for database access (follow patterns in technical_architecture.md)
+  - Implement transaction management (following transaction_management_strategy.md)
   - Write unit tests for repositories
 - Implement basic service layer functionality
   - Write unit tests for services
 - Develop core API endpoints for CRUD operations (based on API endpoints in technical_architecture.md)
   - Write unit tests for API endpoints
+  - Configure app settings (following configuration_deployment_strategy.md)
 - Set up error handling and logging system (follow principles in error_handling_strategy.md)
   - Implement custom exception hierarchy
   - Configure layer-appropriate error handling
   - Set up global error handlers
   - Implement logging strategy
+- Set up dependencies management with Poetry (following dependencies_management_strategy.md)
+- Establish development workflow and code quality tools (following development_workflow_guide.md)
 - ~~Implement authentication foundation~~ (not needed for local-only application)
 - Set up test infrastructure (fixtures, utilities as outlined in testing_strategy.md)
 
@@ -72,9 +79,16 @@
   - Test exception raising in each application layer
   - Test global error handlers
   - Verify error responses match defined formats
+- Perform performance testing and optimization following performance_optimization_strategy.md
+  - Check indexing strategies and database query efficiency
+  - Implement selective caching where beneficial
+  - Monitor and optimize slow operations
+- Test data migration and schema evolution processes outlined in database_schema_evolution_strategy.md
 - Perform integration testing of the complete application (if needed, as outlined in testing_strategy.md)
 - Generate and analyze test coverage reports
-- Optimize database queries and performance
+- Verify transaction handling works as expected (following transaction_management_strategy.md)
+- Review configuration and deployment processes (following configuration_deployment_strategy.md)
+- Assess and update dependencies (following dependencies_management_strategy.md)
 - Refine UI/UX based on testing feedback
 - Address any identified issues or bugs
 

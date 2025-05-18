@@ -21,6 +21,7 @@ This roadmap provides implementation guidance for the database and backend found
    - **Alembic** (latest stable version)
    - Configure via `alembic.ini` and `env.py`
    - Auto-generate migrations with manual review and editing
+   - Follow the database schema evolution strategy outlined in `database_schema_evolution_strategy.md`
 
 ### Implementation Steps
 
@@ -90,8 +91,11 @@ Follow the repository pattern details from `technical_architecture.md`.
 1. **Create Base Repository**
    - Implement `BaseRepository` class with common CRUD operations
    - Set up session management
-   - Add transaction support
-   - Implement error handling following error_handling_strategy.md
+   - Add transaction support following `transaction_management_strategy.md`
+     - Use explicit transaction boundaries
+     - Implement proper error handling and retries
+     - Define appropriate isolation levels
+   - Implement error handling following `error_handling_strategy.md`
      - Catch SQLAlchemy exceptions and convert to application exceptions
      - Add appropriate context to exception messages
 
@@ -112,7 +116,11 @@ For each repository:
 - Add custom filtering and sorting capabilities
 - Implement relationship handling
 - Add any complex query logic specific to the entity
-- Create corresponding unit tests following testing_strategy.md, including:
+- Apply database optimization techniques from `performance_optimization_strategy.md`
+  - Ensure proper indexing strategy
+  - Optimize query performance
+  - Use efficient query patterns
+- Create corresponding unit tests following `testing_strategy.md`, including:
   - Test CRUD operations
   - Test query methods
   - Test error handling
@@ -184,7 +192,11 @@ Follow the API endpoints defined in `technical_architecture.md`.
    - Configure Flask application structure
    - Set up request parsing and validation with Pydantic
    - Implement response formatting and serialization
-   - Add error handling middleware following error_handling_strategy.md
+   - Configure environment-specific settings following `configuration_deployment_strategy.md`
+     - Set up environment variables for configurable options
+     - Implement configuration classes for different environments
+     - Secure sensitive configuration values
+   - Add error handling middleware following `error_handling_strategy.md`
      - Implement global exception handlers for each exception type
      - Configure consistent error response format
      - Set up proper HTTP status code mapping
@@ -331,7 +343,7 @@ Follow the comprehensive approaches defined in testing_strategy.md and error_han
 
 ## Code Quality Tools
 
-Ensure code quality through automated tools and standards enforcement.
+Ensure code quality through automated tools and standards enforcement, following recommendations in `development_workflow_guide.md`.
 
 ### Tool Stack
 
@@ -358,12 +370,21 @@ Ensure code quality through automated tools and standards enforcement.
    - Configure to work together harmoniously
    - Set up pre-commit hooks for automatic formatting
 
+### Dependencies Management
+
+Refer to `dependencies_management_strategy.md` for complete guidelines on:
+- Using Poetry for dependency management
+- Selecting and documenting dependencies
+- Updating dependencies safely
+- Resolving dependency conflicts
+
 ### Integration
 
 - Add configuration files for each tool
 - Set up pre-commit hooks for automated checks
 - Document code style guidelines
-- Integrate with CI/CD pipeline (future)
+- Follow git workflow outlined in `development_workflow_guide.md`
+- Set up repository structure with proper branching strategy
 
 ## Implementation Checkpoints
 
