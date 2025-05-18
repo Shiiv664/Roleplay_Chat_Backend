@@ -352,7 +352,9 @@ class CharacterService:
             raise
 ```
 
-### API Route Implementation
+### API Route Implementation with Global Error Handling
+
+With global error handlers in place, route implementations become much simpler, focusing on the "happy path":
 
 ```python
 @app.route('/api/characters', methods=['POST'])
@@ -363,68 +365,85 @@ def create_character():
     if not data:
         return jsonify({"error": "No data provided"}), 400
         
-    try:
-        # Extract data
-        label = data.get('label')
-        name = data.get('name')
-        avatar_image = data.get('avatar_image')
-        description = data.get('description')
-        
-        # Call service
-        character = character_service.create_character(label, name, avatar_image, description)
-        
-        # Return response
-        return jsonify({
-            "id": character.id,
-            "label": character.label,
-            "name": character.name,
-            "avatar_image": character.avatar_image,
-            "description": character.description
-        }), 201
-        
-    except ValidationError as e:
-        # No need to log here as service already logs
-        return jsonify({"error": str(e)}), 400
-        
-    except ResourceNotFoundError as e:
-        return jsonify({"error": str(e)}), 404
-        
-    except Exception as e:
-        # Log unexpected errors
-        app.logger.error(f"Error in POST /api/characters: {str(e)}")
-        return jsonify({"error": "An unexpected error occurred"}), 500
+    # Extract data
+    label = data.get('label')
+    name = data.get('name')
+    avatar_image = data.get('avatar_image')
+    description = data.get('description')
+    
+    # Call service - any exceptions will be caught by global handlers
+    character = character_service.create_character(label, name, avatar_image, description)
+    
+    # Return response
+    return jsonify({
+        "id": character.id,
+        "label": character.label,
+        "name": character.name,
+        "avatar_image": character.avatar_image,
+        "description": character.description
+    }), 201
 ```
 
-## Global Error Handler
+Notice the absence of try/except blocks. This approach:
+- Makes routes cleaner and more focused
+- Ensures consistent error handling across all endpoints
+- Centralizes error handling logic
+- Reduces code duplication
 
-For Flask applications, implement a global error handler:
+## Comprehensive Global Error Handling
+
+For Flask applications, implement specialized error handlers for each exception type:
 
 ```python
-# Register error handlers for application exceptions
+# Register specific handlers for each exception type
+@app.errorhandler(ValidationError)
+def handle_validation_error(error):
+    app.logger.warning(f"Validation error: {str(error)}")
+    return jsonify({
+        "error": str(error),
+        "type": "ValidationError"
+    }), 400
+
+@app.errorhandler(ResourceNotFoundError)
+def handle_not_found_error(error):
+    app.logger.info(f"Resource not found: {str(error)}")
+    return jsonify({
+        "error": str(error),
+        "type": "ResourceNotFoundError"
+    }), 404
+
+@app.errorhandler(BusinessRuleError)
+def handle_business_rule_error(error):
+    app.logger.warning(f"Business rule violation: {str(error)}")
+    return jsonify({
+        "error": str(error),
+        "type": "BusinessRuleError"
+    }), 422
+
+@app.errorhandler(ExternalAPIError)
+def handle_external_api_error(error):
+    app.logger.error(f"External API error: {str(error)}")
+    return jsonify({
+        "error": str(error),
+        "type": "ExternalAPIError"
+    }), 502
+
+@app.errorhandler(DatabaseError)
+def handle_database_error(error):
+    app.logger.error(f"Database error: {str(error)}")
+    return jsonify({
+        "error": "A database error occurred",
+        "type": "DatabaseError"
+    }), 500
+
+# Generic handler for any other AppError
 @app.errorhandler(AppError)
 def handle_app_error(error):
-    response = {
-        "error": error.message,
+    app.logger.error(f"Application error: {str(error)}")
+    return jsonify({
+        "error": str(error),
         "type": error.__class__.__name__
-    }
-    
-    # Add details if available
-    if hasattr(error, 'details') and error.details:
-        response["details"] = error.details
-        
-    # Map exception types to status codes
-    if isinstance(error, ResourceNotFoundError):
-        status_code = 404
-    elif isinstance(error, ValidationError):
-        status_code = 400
-    elif isinstance(error, BusinessRuleError):
-        status_code = 422
-    elif isinstance(error, ExternalAPIError):
-        status_code = 502
-    else:
-        status_code = 500
-        
-    return jsonify(response), status_code
+    }), 500
     
 # Handle uncaught exceptions
 @app.errorhandler(Exception)
@@ -436,9 +455,43 @@ def handle_unexpected_error(error):
     }), 500
 ```
 
+### Benefits of Specialized Global Handlers
+
+1. **Type-Specific Handling**: Each error type gets its own specialized handler
+2. **Appropriate Logging**: Different error types can be logged at different levels
+3. **Clean Routes**: Route handlers focus only on the happy path
+4. **Consistent Responses**: Error responses are formatted consistently across the application
+5. **DRY Code**: Error handling logic is defined once and used everywhere
+
+### Adding Route-Specific Handling When Needed
+
+For special cases where route-specific handling is required, you can still use try/except blocks in specific routes:
+
+```python
+@app.route('/api/special-case', methods=['POST'])
+def special_case():
+    try:
+        # Special case processing
+        result = special_service.process(request.json)
+        return jsonify(result), 200
+    except ValidationError as e:
+        # Custom validation handling for this specific endpoint
+        return jsonify({
+            "error": str(e),
+            "custom_field": "additional info",
+            "validation_failed": True
+        }), 400
+```
+
+The global handlers will still catch any exceptions not explicitly handled in the route.
+
 ## Testing Error Handling
 
-Unit tests should verify that errors are properly handled:
+Unit tests should verify both exception raising and global error handling:
+
+### Testing Exception Raising
+
+Test that repositories and services raise the correct exceptions:
 
 ```python
 def test_character_repository_not_found():
@@ -464,14 +517,58 @@ def test_character_service_validation():
     repo.create.assert_not_called()
 ```
 
+### Testing Global Error Handlers
+
+Test that global error handlers return the correct responses:
+
+```python
+def test_validation_error_handler(client):
+    # Setup
+    @app.route('/test_validation_error')
+    def raise_validation_error():
+        raise ValidationError("Test validation error")
+        
+    # Test
+    response = client.get('/test_validation_error')
+    
+    # Assert
+    assert response.status_code == 400
+    data = json.loads(response.data)
+    assert data['error'] == "Test validation error"
+    assert data['type'] == "ValidationError"
+
+def test_not_found_error_handler(client):
+    # Setup
+    @app.route('/test_not_found_error')
+    def raise_not_found_error():
+        raise ResourceNotFoundError("Resource not found")
+        
+    # Test
+    response = client.get('/test_not_found_error')
+    
+    # Assert
+    assert response.status_code == 404
+    data = json.loads(response.data)
+    assert data['error'] == "Resource not found"
+    assert data['type'] == "ResourceNotFoundError"
+```
+
+This approach ensures that both your domain code and the error handling infrastructure work correctly.
+
 ## Conclusion
 
-This error handling strategy provides a consistent approach to managing errors throughout the application. By following these guidelines, the application will:
+This error handling strategy provides a consistent approach to managing errors throughout the application, emphasizing global error handlers for simplicity and consistency. By following these guidelines, the application will:
 
 1. Present clear and consistent error messages to users
-2. Provide useful information for debugging
-3. Log appropriate context for troubleshooting
-4. Maintain clean separation of concerns between layers
+2. Provide useful information for debugging without verbose logging
+3. Keep route handlers clean and focused on the happy path
+4. Maintain a clear separation of concerns between layers
 5. Handle errors at the appropriate level of abstraction
+6. Minimize code duplication through centralized error handling
 
-The implementation allows for flexibility while maintaining consistency, making the application more robust and easier to maintain.
+The implementation focuses on simplicity while maintaining flexibility:
+- Global error handlers provide consistency across the application
+- Simple logging focuses on essential information
+- Route-specific error handling is available when needed for special cases
+
+This approach delivers a good balance between simplicity and robustness for a solo development project, with a clear path to enhance error handling if requirements change in the future.
