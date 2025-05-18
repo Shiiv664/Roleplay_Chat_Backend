@@ -6,13 +6,19 @@ This document outlines the testing approach for the Roleplay Chat Web App. It fo
 
 ### Primary Testing Framework
 
-- **pytest** - Used for all test types due to its simplicity, powerful fixtures, and extensive plugin ecosystem
+- **pytest** (latest stable version) - Used for all test types due to its simplicity, powerful fixtures, and extensive plugin ecosystem
+  - Configure via `pytest.ini`
+  - Utilize built-in fixture system with different scopes (function, class, module, session)
+  - Use native assert statements for clean, readable assertions
 
-### Supporting Libraries
+### Supporting Libraries and Plugins
 
-- **pytest-flask** - For testing Flask applications
-- **pytest-mock** - For mocking dependencies
-- **pytest-cov** - For test coverage reporting
+- **pytest-flask** - For testing Flask applications, provides client fixture
+- **pytest-mock** - For integration with Python's unittest.mock library
+- **pytest-cov** - For code coverage reporting and enforcement
+- **pytest-asyncio** - For testing any asynchronous code if needed
+- **pytest-xdist** - For parallel test execution as the test suite grows
+- **Python unittest.mock** - Standard mocking library for test doubles
 - **SQLAlchemy in-memory SQLite** - For database testing without persistence
 
 ## Project Test Structure

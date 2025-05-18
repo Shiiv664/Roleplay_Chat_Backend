@@ -4,6 +4,24 @@ This roadmap provides implementation guidance for the database and backend found
 
 ## Database Setup with SQLAlchemy ORM
 
+### Database Technology Stack
+
+1. **ORM Framework**
+   - **SQLAlchemy** (version >= 2.0)
+   - Leverage modern SQLAlchemy 2.x features and typing support
+   - Use the explicit SQL syntax introduced in 2.0 (vs. legacy query style)
+
+2. **Database Engine**
+   - **Development & Testing**: SQLite
+     - Development connection string: `sqlite:///./app.db`
+     - Testing connection string: `sqlite:///:memory:` for in-memory testing
+   - **Production Recommendation**: PostgreSQL (for future scalability)
+
+3. **Migration Tool**
+   - **Alembic** (latest stable version)
+   - Configure via `alembic.ini` and `env.py`
+   - Auto-generate migrations with manual review and editing
+
 ### Implementation Steps
 
 1. **Create Base SQLAlchemy Configuration**
@@ -140,12 +158,32 @@ For each service:
 
 Follow the API endpoints defined in `technical_architecture.md`.
 
+### API Framework Stack
+
+1. **Web Framework**
+   - **Flask** (version >= 3.0)
+   - Use latest Flask features and best practices
+   - Configure Flask application factory pattern
+
+2. **Request/Response Handling & Validation**
+   - **Pydantic** (latest stable version)
+   - Define Pydantic models for:
+     - Request validation (bodies, query parameters)
+     - Response serialization
+     - Data transfer objects
+   - Use plain Flask routing with Pydantic integration
+   - Leverage Pydantic's validation capabilities
+
+3. **Error Handling**
+   - Custom Flask error handlers (following error_handling_strategy.md)
+   - Consistent JSON error response format
+
 ### Implementation Steps
 
 1. **API Framework Setup**
    - Configure Flask application structure
-   - Set up request parsing and validation
-   - Implement response formatting
+   - Set up request parsing and validation with Pydantic
+   - Implement response formatting and serialization
    - Add error handling middleware following error_handling_strategy.md
      - Implement global exception handlers for each exception type
      - Configure consistent error response format
@@ -224,14 +262,36 @@ Follow the comprehensive approach defined in error_handling_strategy.md.
    - Implement route-specific handling for special cases when needed
 
 4. **Logging Strategy**
-   - Configure basic logging setup
+   - Configure Python's standard logging module as foundation
+   - Implement structured logging with **structlog** (latest stable version)
+     - Production: JSON format for log management systems
+     - Development: Human-readable, colored console output
    - Define log level usage (ERROR, WARNING, INFO, DEBUG)
-   - Implement structured logging approach
+   - Include standard fields (timestamp, level, logger name, message)
+   - Add contextual fields (request ID, user ID, module name)
    - Log appropriate information at each application layer
 
 ## Testing Implementation
 
 Follow the comprehensive approaches defined in testing_strategy.md and error_handling_strategy.md.
+
+### Testing Framework and Tools
+
+1. **Primary Test Framework**
+   - **Pytest** (latest stable version)
+     - Configure via `pytest.ini`
+     - Utilize Pytest's built-in fixture system with different scopes (function, class, module, session)
+     - Use Pytest's native assert statements for clean, readable assertions
+
+2. **Key Pytest Plugins**
+   - **pytest-cov**: For code coverage reporting
+   - **pytest-mock**: For easy integration with Python's unittest.mock library
+   - **pytest-flask**: For testing Flask applications (provides client fixture)
+   - **pytest-asyncio**: For testing any asynchronous code if needed
+   - **pytest-xdist**: For parallel test execution as the test suite grows
+
+3. **Mocking Framework**
+   - Python's standard **unittest.mock** library, accessed via pytest-mock
 
 ### Implementation Steps
 
@@ -256,6 +316,8 @@ Follow the comprehensive approaches defined in testing_strategy.md and error_han
 
 3. **Test Reporting**
    - Set up test coverage reporting with pytest-cov
+     - Generate HTML reports for detailed coverage analysis
+     - Configure minimum coverage thresholds in pytest.ini
    - Establish baseline coverage goals as defined in testing_strategy.md
    - Maintain coverage reports during development
 
@@ -263,6 +325,45 @@ Follow the comprehensive approaches defined in testing_strategy.md and error_han
    - Create fixtures for test data as specified in testing_strategy.md
    - Implement test helpers
    - Set up test configuration with pytest.ini
+     - Configure plugins
+     - Set default command line options
+     - Define test markers
+
+## Code Quality Tools
+
+Ensure code quality through automated tools and standards enforcement.
+
+### Tool Stack
+
+1. **Linting**
+   - **Flake8** (latest stable version)
+   - Configure via `.flake8` file or `pyproject.toml`
+   - Key plugins:
+     - `flake8-bugbear`: Find design problems and likely bugs
+     - `flake8-comprehensions`: Help write pythonic comprehensions
+     - `flake8-pytest-style`: Check for Pytest anti-patterns
+     - `flake8-docstrings`: Validate docstring conventions
+     - `flake8-import-order`: Check import order
+
+2. **Type Checking**
+   - **MyPy** (latest stable version)
+   - Configure via `mypy.ini` or `pyproject.toml`
+   - Adopt gradual typing approach
+   - Add type hints to all new code
+   - Set up CI/CD integration for type checking
+
+3. **Code Formatting**
+   - **Black** (latest stable version) for consistent code style
+   - **isort** (latest stable version) for sorting imports
+   - Configure to work together harmoniously
+   - Set up pre-commit hooks for automatic formatting
+
+### Integration
+
+- Add configuration files for each tool
+- Set up pre-commit hooks for automated checks
+- Document code style guidelines
+- Integrate with CI/CD pipeline (future)
 
 ## Implementation Checkpoints
 
