@@ -10,6 +10,7 @@ Follow these principles when modifying or adding code:
 - Write testable code with appropriate error handling
 - Ensure security by validating input and using parameterized queries
 - Maintain consistency in coding style and architecture
+- Reference the testing_strategy.md file so we make sure to always test every new code properly and update the test scripts when necessary
 
 ## Development Approach
 

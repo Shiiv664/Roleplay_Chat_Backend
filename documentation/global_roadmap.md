@@ -22,11 +22,16 @@
 ## Phase 3: Database & Backend Foundation
 - Implement database setup with SQLAlchemy ORM (follow structure in technical_architecture.md)
 - Create SQLAlchemy models for all entities (implement models as designed in technical_architecture.md)
+  - Write unit tests for models (following testing_strategy.md)
 - Implement repository pattern for database access (follow patterns in technical_architecture.md)
+  - Write unit tests for repositories
 - Implement basic service layer functionality
+  - Write unit tests for services
 - Develop core API endpoints for CRUD operations (based on API endpoints in technical_architecture.md)
+  - Write unit tests for API endpoints
 - Set up error handling and logging system
-- Implement authentication foundation (if needed)
+- ~~Implement authentication foundation~~ (not needed for local-only application)
+- Set up test infrastructure (fixtures, utilities as outlined in testing_strategy.md)
 
 ## Phase 4: Frontend Foundation
 - Set up basic frontend structure and build pipeline (follow directory structure in technical_architecture.md)
@@ -58,8 +63,9 @@
 - Implement session management for chat continuation
 
 ## Phase 8: Testing & Refinement
-- Conduct comprehensive testing of all components
-- Perform integration testing of the complete application
+- Review and expand unit tests following testing_strategy.md
+- Perform integration testing of the complete application (if needed, as outlined in testing_strategy.md)
+- Generate and analyze test coverage reports
 - Optimize database queries and performance
 - Refine UI/UX based on testing feedback
 - Address any identified issues or bugs

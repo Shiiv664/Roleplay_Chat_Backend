@@ -10,13 +10,21 @@ This roadmap provides implementation guidance for the database and backend found
    - Set up SQLAlchemy engine connection to SQLite
    - Configure Base declarative class
    - Implement session management utilities
-   - Add Alembic integration for migrations
+   - Add Alembic integration for migrations (confirmed)
+   - Write unit tests for database configuration
 
 2. **Implement Database Initialization Script**
    - Create script to initialize database if not exists
    - Set up initial migration
    - Add database version tracking
-   - Include script for generating test data (optional)
+   - Create script for generating test data (confirmed)
+   - Write tests to verify database initialization
+
+3. **Set Up Test Infrastructure**
+   - Create test fixtures as defined in testing_strategy.md
+   - Set up in-memory SQLite for tests
+   - Configure pytest.ini
+   - Create test data factory functions
 
 ## SQLAlchemy Models Implementation
 
@@ -49,7 +57,11 @@ For each model:
 - Add constraints (unique, non-null, etc.)
 - Implement relationships between models
 - Add any model-specific methods
-- Set up validation at the model level
+- Set up validation at the SQLAlchemy model level (confirmed approach)
+- Create corresponding unit tests following testing_strategy.md, including:
+  - Test model initialization
+  - Test constraints and validations
+  - Test relationship configurations
 
 ## Repository Pattern Implementation
 
@@ -80,6 +92,10 @@ For each repository:
 - Add custom filtering and sorting capabilities
 - Implement relationship handling
 - Add any complex query logic specific to the entity
+- Create corresponding unit tests following testing_strategy.md, including:
+  - Test CRUD operations
+  - Test query methods
+  - Test error handling
 
 ## Service Layer Implementation
 
@@ -109,6 +125,11 @@ For each service:
 - Create methods for complex operations across multiple repositories
 - Handle any external API interactions
 - Ensure proper error handling and transaction management
+- Create corresponding unit tests following testing_strategy.md, including:
+  - Test business logic with mocked repositories
+  - Test validation rules
+  - Test error scenarios
+  - Test transaction management
 
 ## API Endpoints Implementation
 
@@ -144,6 +165,12 @@ For each route group:
 - Connect to appropriate service layer methods
 - Format responses consistently
 - Document API endpoints with docstrings or comments
+- Create corresponding unit tests following testing_strategy.md, including:
+  - Test request validation
+  - Test response formatting
+  - Test status codes
+  - Test error handling
+  - Test with mocked services
 
 ## Error Handling and Logging
 
@@ -161,25 +188,27 @@ For each route group:
    - Add specific error handling for different scenarios
    - Ensure proper error responses for the API
 
-## Testing Strategy
+## Testing Implementation
+
+Follow the comprehensive approach defined in testing_strategy.md.
 
 ### Implementation Steps
 
 1. **Unit Testing**
-   - Create tests for models
-   - Test repositories with mock sessions
+   - Create tests for models following the patterns in testing_strategy.md
+   - Test repositories with mock sessions as outlined in testing_strategy.md
    - Test services with mock repositories
    - Test API routes with mock services
 
-2. **Integration Testing**
-   - Test database operations with a test database
-   - Test service layer with actual repositories
-   - Test API routes with the full stack
+2. **Test Reporting**
+   - Set up test coverage reporting with pytest-cov
+   - Establish baseline coverage goals as defined in testing_strategy.md
+   - Maintain coverage reports during development
 
 3. **Test Utilities**
-   - Create fixtures for test data
+   - Create fixtures for test data as specified in testing_strategy.md
    - Implement test helpers
-   - Set up test configuration
+   - Set up test configuration with pytest.ini
 
 ## Implementation Checkpoints
 
