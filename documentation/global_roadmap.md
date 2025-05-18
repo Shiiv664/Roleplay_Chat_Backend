@@ -29,7 +29,11 @@
   - Write unit tests for services
 - Develop core API endpoints for CRUD operations (based on API endpoints in technical_architecture.md)
   - Write unit tests for API endpoints
-- Set up error handling and logging system
+- Set up error handling and logging system (follow principles in error_handling_strategy.md)
+  - Implement custom exception hierarchy
+  - Configure layer-appropriate error handling
+  - Set up global error handlers
+  - Implement logging strategy
 - ~~Implement authentication foundation~~ (not needed for local-only application)
 - Set up test infrastructure (fixtures, utilities as outlined in testing_strategy.md)
 
@@ -64,6 +68,10 @@
 
 ## Phase 8: Testing & Refinement
 - Review and expand unit tests following testing_strategy.md
+- Test error handling implementation as outlined in error_handling_strategy.md
+  - Test exception raising in each application layer
+  - Test global error handlers
+  - Verify error responses match defined formats
 - Perform integration testing of the complete application (if needed, as outlined in testing_strategy.md)
 - Generate and analyze test coverage reports
 - Optimize database queries and performance

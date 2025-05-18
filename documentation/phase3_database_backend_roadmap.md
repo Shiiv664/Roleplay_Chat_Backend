@@ -73,7 +73,9 @@ Follow the repository pattern details from `technical_architecture.md`.
    - Implement `BaseRepository` class with common CRUD operations
    - Set up session management
    - Add transaction support
-   - Implement error handling
+   - Implement error handling following error_handling_strategy.md
+     - Catch SQLAlchemy exceptions and convert to application exceptions
+     - Add appropriate context to exception messages
 
 2. **Entity-Specific Repositories**
    - Character repository
@@ -104,7 +106,10 @@ For each repository:
 1. **Create Service Base Structure**
    - Define common service patterns
    - Set up dependency injection for repositories
-   - Implement error handling
+   - Implement error handling following error_handling_strategy.md
+     - Handle business rule validation errors
+     - Add contextual information to errors
+     - Properly propagate repository exceptions
 
 2. **Core Services**
    - Character service
@@ -141,7 +146,10 @@ Follow the API endpoints defined in `technical_architecture.md`.
    - Configure Flask application structure
    - Set up request parsing and validation
    - Implement response formatting
-   - Add error handling middleware
+   - Add error handling middleware following error_handling_strategy.md
+     - Implement global exception handlers for each exception type
+     - Configure consistent error response format
+     - Set up proper HTTP status code mapping
 
 2. **Core API Routes**
    - Character routes
@@ -174,23 +182,56 @@ For each route group:
 
 ## Error Handling and Logging
 
+Follow the comprehensive approach defined in error_handling_strategy.md.
+
 ### Implementation Steps
 
-1. **Logging System**
-   - Set up structured logging
-   - Configure log levels
-   - Implement log rotation
-   - Add context to log messages
+1. **Custom Exception Hierarchy**
+   - Create base `AppError` exception class
+   - Implement specific exception types:
+     - `DatabaseError` for database operation errors
+     - `ValidationError` for data validation errors
+     - `ResourceNotFoundError` for not found errors
+     - `ExternalAPIError` for OpenRouter API issues
+     - `BusinessRuleError` for business rule violations
 
-2. **Error Handling**
-   - Create custom exception classes
-   - Implement global exception handler
-   - Add specific error handling for different scenarios
-   - Ensure proper error responses for the API
+2. **Layer-Appropriate Error Handling**
+   - **Database/ORM Layer**:
+     - Allow SQLAlchemy exceptions to bubble up
+     - Don't catch exceptions at model level unless necessary
+   - **Repository Layer**:
+     - Catch SQLAlchemy exceptions and convert to application exceptions
+     - Map SQLAlchemy exceptions to appropriate application exceptions
+     - Add contextual information to errors
+   - **Service Layer**:
+     - Handle business rule validation
+     - Add contextual information to errors from repositories
+     - Log errors with appropriate context
+   - **API Layer**:
+     - Catch application exceptions and convert to HTTP responses
+     - Implement proper status code mapping
+
+3. **Global Error Handling**
+   - Set up Flask error handlers for each exception type
+   - Configure consistent error response format:
+     ```json
+     {
+       "error": "Human-readable error message",
+       "type": "ErrorClassName",
+       "details": { /* Optional details */ }
+     }
+     ```
+   - Implement route-specific handling for special cases when needed
+
+4. **Logging Strategy**
+   - Configure basic logging setup
+   - Define log level usage (ERROR, WARNING, INFO, DEBUG)
+   - Implement structured logging approach
+   - Log appropriate information at each application layer
 
 ## Testing Implementation
 
-Follow the comprehensive approach defined in testing_strategy.md.
+Follow the comprehensive approaches defined in testing_strategy.md and error_handling_strategy.md.
 
 ### Implementation Steps
 
@@ -200,12 +241,25 @@ Follow the comprehensive approach defined in testing_strategy.md.
    - Test services with mock repositories
    - Test API routes with mock services
 
-2. **Test Reporting**
+2. **Error Handling Testing**
+   - **Test Exception Raising**:
+     - Verify repositories raise correct exceptions for database errors
+     - Test service layer validation and exception handling
+     - Ensure proper exception propagation between layers
+   - **Test Global Error Handlers**:
+     - Verify error handlers return correct status codes
+     - Test error response format consistency
+     - Ensure proper mapping of exception types to HTTP status codes
+   - **Test Error Logging**:
+     - Verify appropriate information is logged for errors
+     - Test that sensitive information is not exposed in logs
+
+3. **Test Reporting**
    - Set up test coverage reporting with pytest-cov
    - Establish baseline coverage goals as defined in testing_strategy.md
    - Maintain coverage reports during development
 
-3. **Test Utilities**
+4. **Test Utilities**
    - Create fixtures for test data as specified in testing_strategy.md
    - Implement test helpers
    - Set up test configuration with pytest.ini
