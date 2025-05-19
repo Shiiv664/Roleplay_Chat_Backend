@@ -1,0 +1,76 @@
+"""Configuration settings for the application."""
+import os
+from pathlib import Path
+from typing import Dict, Optional
+
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Base directory of the project
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+class Config:
+    """Base configuration class."""
+
+    # SQLAlchemy configuration
+    SQLALCHEMY_DATABASE_URI: str = os.getenv(
+        "DATABASE_URL", f"sqlite:///{BASE_DIR}/app.db"
+    )
+    SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
+
+    # Flask configuration
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "dev-key-change-in-production")
+    DEBUG: bool = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
+
+    # Application settings
+    APP_NAME: str = "LLM Roleplay Chat Client"
+    API_VERSION: str = "v1"
+
+
+class DevelopmentConfig(Config):
+    """Development configuration."""
+
+    DEBUG = True
+    SQLALCHEMY_DATABASE_URI = os.getenv(
+        "DEV_DATABASE_URL", f"sqlite:///{BASE_DIR}/app.db"
+    )
+
+
+class TestingConfig(Config):
+    """Testing configuration."""
+
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = os.getenv(
+        "TEST_DATABASE_URL", "sqlite:///:memory:"
+    )
+
+
+class ProductionConfig(Config):
+    """Production configuration."""
+
+    DEBUG = False
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL")
+    SECRET_KEY = os.getenv("SECRET_KEY")
+
+    @classmethod
+    def is_valid(cls) -> bool:
+        """Validate production configuration."""
+        return all([cls.SQLALCHEMY_DATABASE_URI, cls.SECRET_KEY])
+
+
+# Configuration dictionary
+config: Dict[str, Config] = {
+    "development": DevelopmentConfig,
+    "testing": TestingConfig,
+    "production": ProductionConfig,
+    "default": DevelopmentConfig,
+}
+
+
+def get_config() -> Config:
+    """Get the current configuration based on environment."""
+    env = os.getenv("FLASK_ENV", "development")
+    return config.get(env, config["default"])

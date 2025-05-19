@@ -1,0 +1,32 @@
+repos:
+- repo: local
+  hooks:
+  - id: trailing-whitespace
+    name: Trim trailing whitespace
+    entry: poetry run trailing-whitespace-fixer
+    language: system
+    types: [text]
+  
+  - id: end-of-file-fixer
+    name: Fix end of files
+    entry: poetry run end-of-file-fixer
+    language: system
+    types: [text]
+  
+  - id: black
+    name: black
+    entry: poetry run black
+    language: system
+    types: [python]
+  
+  - id: isort
+    name: isort
+    entry: poetry run isort
+    language: system
+    types: [python]
+  
+  - id: flake8
+    name: flake8
+    entry: poetry run flake8
+    language: system
+    types: [python]

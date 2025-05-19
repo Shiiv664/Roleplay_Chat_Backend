@@ -1,0 +1,1 @@
+"""API layer exposing HTTP endpoints for the application."""
