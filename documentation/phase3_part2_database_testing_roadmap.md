@@ -149,14 +149,14 @@ Create reusable fixtures and utilities to simplify test implementation:
      - [✓] Create `create_model_with_unique_constraint(model_class, db_session, unique_field, **kwargs)` utility
      - [✓] Create `create_related_models(db_session, parent_factory, child_factory, parent_attr, child_attr)` utility
 
-   - [🔄] **Model Test Refactoring - Independent Entities**
+   - [✓] **Model Test Refactoring - Independent Entities**
      - [✓] Refactor Character model tests to use helper functions
      - [✓] Refactor Base model tests to use helper functions
      - [✓] Refactor UserProfile model tests to use helper functions
      - [✓] Refactor AIModel model tests to use helper functions
-     - [ ] Refactor SystemPrompt model tests to use helper functions
+     - [✓] Refactor SystemPrompt model tests to use helper functions
 
-   - [ ] **Model Test Refactoring - Dependent Entities**
+   - [🔄] **Model Test Refactoring - Dependent Entities**
      - [ ] Refactor ChatSession model tests to use helper functions
      - [ ] Refactor Message model tests to use helper functions
      - [ ] Refactor ApplicationSettings model tests to use helper functions
