@@ -130,19 +130,14 @@ def test_character_relationships(db_session, create_character, create_chat_sessi
     db_session.commit()
 
     # Create chat sessions associated with the character
-    session1 = create_chat_session(title="Session 1", character=character)
-    session2 = create_chat_session(title="Session 2", character=character)
+    session1 = create_chat_session(character=character)
+    session2 = create_chat_session(character=character)
     db_session.add_all([session1, session2])
     db_session.commit()
 
     # Test relationship fetching
     sessions = character.chat_sessions.all()
     assert len(sessions) == 2
-
-    # Verify session data
-    session_titles = [s.title for s in sessions]
-    assert "Session 1" in session_titles
-    assert "Session 2" in session_titles
 
     # Verify bidirectional relationship
     for session in sessions:
@@ -156,7 +151,7 @@ def test_character_cascade_delete(db_session, create_character, create_chat_sess
     db_session.add(character)
     db_session.commit()
 
-    session1 = create_chat_session(title="Session to Delete", character=character)
+    session1 = create_chat_session(character=character)
     db_session.add(session1)
     db_session.commit()
 

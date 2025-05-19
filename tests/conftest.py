@@ -102,14 +102,10 @@ def create_ai_model():
 
     def _create_ai_model(
         label="test_model",
-        name="Test AI Model",
-        model_provider="test-provider",
         description="A test AI model",
     ):
         return AIModel(
             label=label,
-            name=name,
-            model_provider=model_provider,
             description=description,
         )
 
@@ -126,13 +122,9 @@ def create_system_prompt():
 
     def _create_system_prompt(
         label="test_prompt",
-        name="Test System Prompt",
         content="This is a test system prompt content",
-        description="A test system prompt",
     ):
-        return SystemPrompt(
-            label=label, name=name, content=content, description=description
-        )
+        return SystemPrompt(label=label, content=content)
 
     return _create_system_prompt
 
@@ -160,7 +152,6 @@ def create_chat_session(
     """
 
     def _create_chat_session(
-        title="Test Chat Session",
         character=None,
         user_profile=None,
         ai_model=None,
@@ -172,21 +163,32 @@ def create_chat_session(
             db_session.add(character)
 
         if not user_profile:
-            user_profile = create_user_profile()
+            # Create with a unique label based on current time
+            import time
+
+            unique_label = f"test_profile_{time.time()}"
+            user_profile = create_user_profile(label=unique_label)
             db_session.add(user_profile)
 
         if not ai_model:
-            ai_model = create_ai_model()
+            # Create with a unique label based on current time
+            import time
+
+            unique_label = f"test_model_{time.time()}"
+            ai_model = create_ai_model(label=unique_label)
             db_session.add(ai_model)
 
         if not system_prompt:
-            system_prompt = create_system_prompt()
+            # Create with a unique label based on current time
+            import time
+
+            unique_label = f"test_prompt_{time.time()}"
+            system_prompt = create_system_prompt(label=unique_label)
             db_session.add(system_prompt)
 
         db_session.flush()  # Ensure IDs are generated
 
         return ChatSession(
-            title=title,
             character_id=character.id,
             user_profile_id=user_profile.id,
             ai_model_id=ai_model.id,
@@ -253,15 +255,27 @@ def create_application_settings(
             db_session.add(default_character)
 
         if not default_user_profile:
-            default_user_profile = create_user_profile()
+            # Create with a unique label based on current time
+            import time
+
+            unique_label = f"test_profile_{time.time()}"
+            default_user_profile = create_user_profile(label=unique_label)
             db_session.add(default_user_profile)
 
         if not default_ai_model:
-            default_ai_model = create_ai_model()
+            # Create with a unique label based on current time
+            import time
+
+            unique_label = f"test_model_{time.time()}"
+            default_ai_model = create_ai_model(label=unique_label)
             db_session.add(default_ai_model)
 
         if not default_system_prompt:
-            default_system_prompt = create_system_prompt()
+            # Create with a unique label based on current time
+            import time
+
+            unique_label = f"test_prompt_{time.time()}"
+            default_system_prompt = create_system_prompt(label=unique_label)
             db_session.add(default_system_prompt)
 
         db_session.flush()  # Ensure IDs are generated
