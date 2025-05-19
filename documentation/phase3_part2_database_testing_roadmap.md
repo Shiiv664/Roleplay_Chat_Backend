@@ -115,10 +115,43 @@ Create reusable fixtures and utilities to simplify test implementation:
    - [✓] Create Message factory fixture
    - [✓] Create ApplicationSettings factory fixture
 
-3. **Helper Functions**
-   - [ ] Create validation helper functions
-   - [ ] Create relationship testing utilities
-   - [ ] Create constraint testing utilities
+3. **Helper Functions and Test Refactoring**
+
+   Create helper functions to reduce code duplication and improve test maintainability:
+
+   - [ ] **Basic Model Test Helpers** (tests/models/helpers.py)
+     - [ ] Create `test_model_inheritance(model_class, parent_class)` helper
+     - [ ] Create `test_model_tablename(model_class, expected_tablename)` helper
+     - [ ] Create `test_model_repr(model_instance, expected_attributes)` helper
+
+   - [ ] **Column Validation Helpers**
+     - [ ] Create `check_column_constraints(model_class, column_name, nullable, unique, primary_key, etc.)` helper
+     - [ ] Create `test_required_fields(db_session, model_class, required_fields)` helper
+     - [ ] Create `test_unique_constraint(db_session, model_class, unique_field, value1, value2)` helper
+     - [ ] Create `test_enum_field(db_session, model_class, field_name, enum_class)` helper
+
+   - [ ] **Relationship Testing Helpers**
+     - [ ] Create `test_relationship(parent_obj, child_obj, parent_attr, child_attr, backref)` helper
+     - [ ] Create `test_foreign_key_constraint(db_session, model_class, fk_field, valid_id, invalid_id)` helper
+     - [ ] Create `test_cascade_delete(db_session, parent_obj, child_obj, relationship_name)` helper
+     - [ ] Create `test_many_to_many(db_session, model1, model2, relationship1, relationship2)` helper
+
+   - [ ] **Model Test Refactoring - Independent Entities**
+     - [ ] Refactor Base model tests to use helper functions
+     - [ ] Refactor Character model tests to use helper functions
+     - [ ] Refactor UserProfile model tests to use helper functions
+     - [ ] Refactor AIModel model tests to use helper functions
+     - [ ] Refactor SystemPrompt model tests to use helper functions
+
+   - [ ] **Model Test Refactoring - Dependent Entities**
+     - [ ] Refactor ChatSession model tests to use helper functions
+     - [ ] Refactor Message model tests to use helper functions
+     - [ ] Refactor ApplicationSettings model tests to use helper functions
+
+   - [ ] **Add Common Test Fixtures**
+     - [ ] Create fixtures for common test patterns
+     - [ ] Create parameterized tests for similar models
+     - [ ] Create reusable test cases that work across model types
 
 ## Test Coverage Goals
 
@@ -141,59 +174,222 @@ Set up commands and workflows for running and verifying tests:
    - [ ] Set up coverage threshold checks
    - [ ] Enforce test passing for merges
 
-## Model Test Examples
+## Helper Function Examples
 
-### Base Model Test Example
+### Basic Model Test Helpers
 
 ```python
-def test_base_to_dict(db_session):
-    """Test Base.to_dict() method."""
-    character = Character(label="test_char", name="Test Character")
-    db_session.add(character)
-    db_session.commit()
+# tests/models/helpers.py
 
-    dict_data = character.to_dict()
+def test_model_inheritance(model_class, parent_class):
+    """Test that a model inherits from the correct parent class.
 
-    assert isinstance(dict_data, dict)
-    assert dict_data["id"] == character.id
-    assert dict_data["label"] == "test_char"
-    assert dict_data["name"] == "Test Character"
+    Args:
+        model_class: The model class to test
+        parent_class: The expected parent class
+    """
+    assert issubclass(model_class, parent_class)
 
-def test_timestamp_mixin():
-    """Test TimestampMixin adds created_at and updated_at."""
-    character = Character(label="test_char", name="Test Character")
 
-    assert hasattr(character, "created_at")
-    assert hasattr(character, "updated_at")
+def test_model_tablename(model_class, expected_tablename):
+    """Test that a model has the correct table name.
+
+    Args:
+        model_class: The model class to test
+        expected_tablename: The expected table name
+    """
+    assert model_class.__tablename__ == expected_tablename
+
+
+def test_model_repr(model_instance, expected_attributes):
+    """Test the string representation of a model instance.
+
+    Args:
+        model_instance: The model instance to test
+        expected_attributes: Dictionary of attribute names and values expected in __repr__
+    """
+    repr_string = repr(model_instance)
+    model_name = model_instance.__class__.__name__
+    assert model_name in repr_string
+
+    for attr_name, attr_value in expected_attributes.items():
+        expected_text = f"{attr_name}={attr_value}"
+        assert expected_text in repr_string
 ```
 
-### Character Model Test Example
+### Column Validation Helpers
 
 ```python
-def test_character_creation():
-    """Test Character model initialization."""
-    character = Character(label="test_char", name="Test Character",
-                          description="Test description")
+def check_column_constraints(model_class, column_name, nullable=True, unique=False,
+                            primary_key=False, column_type=None, default=None):
+    """Check constraints on a model column.
 
-    assert character.label == "test_char"
-    assert character.name == "Test Character"
-    assert character.description == "Test description"
-    assert character.created_at is None  # Will be set on commit
-    assert character.updated_at is None  # Will be set on commit
+    Args:
+        model_class: The model class to check
+        column_name: The name of the column to check
+        nullable: Whether the column should allow NULL values
+        unique: Whether the column should have a unique constraint
+        primary_key: Whether the column is a primary key
+        column_type: Expected SQLAlchemy column type
+        default: Expected default value for the column
+    """
+    assert hasattr(model_class, column_name), f"{model_class.__name__} has no column {column_name}"
+    column = getattr(model_class, column_name).property.columns[0]
 
-def test_character_unique_constraint(db_session):
-    """Test Character.label unique constraint."""
-    character1 = Character(label="unique_char", name="Character 1")
-    db_session.add(character1)
+    assert column.nullable == nullable, f"Expected nullable={nullable}, got {column.nullable}"
+    assert column.unique == unique, f"Expected unique={unique}, got {column.unique}"
+    assert column.primary_key == primary_key, f"Expected primary_key={primary_key}, got {column.primary_key}"
+
+    if column_type:
+        assert isinstance(column.type, column_type), f"Expected {column_type}, got {type(column.type)}"
+
+    if default is not None:
+        assert column.default.arg == default, f"Expected default={default}, got {column.default.arg}"
+
+
+def test_required_fields(db_session, model_class, create_valid_data, required_fields):
+    """Test that required fields cannot be NULL.
+
+    Args:
+        db_session: SQLAlchemy session
+        model_class: The model class to test
+        create_valid_data: Function that returns a dict of valid data for model creation
+        required_fields: List of field names that should be required
+    """
+    # For each required field, test that it cannot be NULL
+    for field in required_fields:
+        valid_data = create_valid_data()
+        valid_data.pop(field)  # Remove the required field
+
+        # Create model instance without the required field
+        instance = model_class(**valid_data)
+        db_session.add(instance)
+
+        # Should raise IntegrityError
+        with pytest.raises(IntegrityError):
+            db_session.commit()
+        db_session.rollback()
+```
+
+### Relationship Testing Helpers
+
+```python
+def test_relationship(db_session, parent_obj, child_obj, parent_attr, child_attr,
+                     is_collection=True, bidirectional=True):
+    """Test a relationship between two model instances.
+
+    Args:
+        db_session: SQLAlchemy session
+        parent_obj: Parent model instance
+        child_obj: Child model instance
+        parent_attr: Attribute name on parent that relates to child
+        child_attr: Attribute name on child that relates to parent
+        is_collection: Whether the parent-to-child relationship is a collection
+        bidirectional: Whether the relationship is bidirectional
+    """
+    # Add both objects to session and flush to generate IDs
+    db_session.add_all([parent_obj, child_obj])
+    db_session.flush()
+
+    # Set up the relationship from child to parent
+    setattr(child_obj, child_attr, parent_obj)
+    db_session.flush()
+
+    # Test parent to child relationship
+    parent_rel = getattr(parent_obj, parent_attr)
+    if is_collection:
+        assert child_obj in parent_rel
+    else:
+        assert parent_rel == child_obj
+
+    # Test child to parent relationship if bidirectional
+    if bidirectional:
+        child_rel = getattr(child_obj, child_attr)
+        assert child_rel == parent_obj
+
+
+def test_cascade_delete(db_session, parent_obj, child_obj, parent_attr, child_attr):
+    """Test that deleting a parent cascades to its children.
+
+    Args:
+        db_session: SQLAlchemy session
+        parent_obj: Parent model instance
+        child_obj: Child model instance
+        parent_attr: Attribute name on parent that relates to child
+        child_attr: Attribute name on child that relates to parent
+    """
+    # Set up relationship
+    setattr(child_obj, child_attr, parent_obj)
+    db_session.add_all([parent_obj, child_obj])
     db_session.commit()
 
-    character2 = Character(label="unique_char", name="Character 2")
-    db_session.add(character2)
+    # Store child ID for verification
+    child_id = child_obj.id
+    child_class = child_obj.__class__
 
-    # Should raise IntegrityError due to unique constraint
-    with pytest.raises(IntegrityError):
-        db_session.commit()
-    db_session.rollback()
+    # Delete parent
+    db_session.delete(parent_obj)
+    db_session.commit()
+
+    # Verify child was deleted
+    deleted_child = db_session.query(child_class).filter_by(id=child_id).first()
+    assert deleted_child is None
+```
+
+## Refactored Test Examples
+
+### Using Basic Model Test Helpers
+
+```python
+# Original test function
+def test_character_inheritance():
+    """Test Character model inherits from correct base class."""
+    assert issubclass(Character, Base)
+
+# Refactored using helper
+def test_character_inheritance():
+    """Test Character model inherits from correct base class."""
+    test_model_inheritance(Character, Base)
+
+
+# Original test function
+def test_character_tablename():
+    """Test Character model has the correct table name."""
+    assert Character.__tablename__ == "character"
+
+# Refactored using helper
+def test_character_tablename():
+    """Test Character model has the correct table name."""
+    test_model_tablename(Character, "character")
+```
+
+### Using Column Validation Helpers
+
+```python
+# Original test
+def test_character_columns():
+    """Test Character model has the expected columns."""
+    assert hasattr(Character, "id")
+    assert hasattr(Character, "label")
+    assert hasattr(Character, "name")
+    assert hasattr(Character, "description")
+    assert hasattr(Character, "avatar_image")
+
+# Refactored using helpers
+def test_character_columns():
+    """Test Character model has the expected columns."""
+    # Check primary key
+    check_column_constraints(Character, "id", nullable=False, primary_key=True,
+                            column_type=Integer)
+
+    # Check required fields
+    check_column_constraints(Character, "label", nullable=False, unique=True,
+                            column_type=String)
+    check_column_constraints(Character, "name", nullable=False, column_type=String)
+
+    # Check optional fields
+    check_column_constraints(Character, "description", nullable=True, column_type=Text)
+    check_column_constraints(Character, "avatar_image", nullable=True, column_type=String)
 ```
 
 ## Getting Started Checklist
