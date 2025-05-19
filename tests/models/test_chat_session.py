@@ -1,6 +1,8 @@
-"""Tests for the ChatSession model."""
+"""Tests for the ChatSession model using helper functions."""
 
 import datetime
+
+from sqlalchemy import Integer, String, Text, DateTime, Boolean, ForeignKey
 
 import pytest
 from sqlalchemy.exc import IntegrityError
@@ -8,45 +10,97 @@ from sqlalchemy.exc import IntegrityError
 from app.models.base import Base
 from app.models.chat_session import ChatSession
 from app.models.message import Message, MessageRole
+from tests.models.helpers import (
+    check_model_inheritance,
+    check_model_tablename,
+    check_model_columns_existence,
+    check_model_repr,
+    check_column_constraints,
+    check_cascade_delete,
+    check_relationship,
+    check_foreign_key_constraint,
+)
 
 
 def test_chat_session_inheritance():
     """Test ChatSession model inherits from correct base class."""
-    assert issubclass(ChatSession, Base)
+    check_model_inheritance(ChatSession, Base)
 
 
 def test_chat_session_tablename():
     """Test ChatSession model has the correct table name."""
-    assert ChatSession.__tablename__ == "chatSession"
+    check_model_tablename(ChatSession, "chatSession")
 
 
 def test_chat_session_columns():
     """Test ChatSession model has the expected columns."""
-    # Check primary key
-    assert hasattr(ChatSession, "id")
-
-    # Check timestamp fields
-    assert hasattr(ChatSession, "start_time")
-    assert hasattr(ChatSession, "updated_at")
-
-    # Check foreign key fields
-    assert hasattr(ChatSession, "character_id")
-    assert hasattr(ChatSession, "user_profile_id")
-    assert hasattr(ChatSession, "ai_model_id")
-    assert hasattr(ChatSession, "system_prompt_id")
-
-    # Check optional fields
-    assert hasattr(ChatSession, "pre_prompt")
-    assert hasattr(ChatSession, "pre_prompt_enabled")
-    assert hasattr(ChatSession, "post_prompt")
-    assert hasattr(ChatSession, "post_prompt_enabled")
-
-    # Check relationships
-    assert hasattr(ChatSession, "character")
-    assert hasattr(ChatSession, "user_profile")
-    assert hasattr(ChatSession, "ai_model")
-    assert hasattr(ChatSession, "system_prompt")
-    assert hasattr(ChatSession, "messages")
+    # Test column existence
+    expected_columns = [
+        "id",
+        "start_time",
+        "updated_at",
+        "character_id",
+        "user_profile_id",
+        "ai_model_id",
+        "system_prompt_id",
+        "pre_prompt",
+        "pre_prompt_enabled",
+        "post_prompt",
+        "post_prompt_enabled",
+        "character",
+        "user_profile",
+        "ai_model",
+        "system_prompt",
+        "messages",
+    ]
+    check_model_columns_existence(ChatSession, expected_columns)
+    
+    # Test primary key and timestamp columns
+    check_column_constraints(
+        ChatSession, "id", nullable=False, primary_key=True, column_type=Integer
+    )
+    
+    check_column_constraints(
+        ChatSession, "start_time", nullable=False, column_type=DateTime
+    )
+    
+    check_column_constraints(
+        ChatSession, "updated_at", nullable=False, column_type=DateTime
+    )
+    
+    # Test foreign key columns
+    check_column_constraints(
+        ChatSession, "character_id", nullable=False, column_type=Integer
+    )
+    
+    check_column_constraints(
+        ChatSession, "user_profile_id", nullable=False, column_type=Integer
+    )
+    
+    check_column_constraints(
+        ChatSession, "ai_model_id", nullable=False, column_type=Integer
+    )
+    
+    check_column_constraints(
+        ChatSession, "system_prompt_id", nullable=False, column_type=Integer
+    )
+    
+    # Test optional fields
+    check_column_constraints(
+        ChatSession, "pre_prompt", nullable=True, column_type=Text
+    )
+    
+    check_column_constraints(
+        ChatSession, "pre_prompt_enabled", nullable=False, column_type=Boolean
+    )
+    
+    check_column_constraints(
+        ChatSession, "post_prompt", nullable=True, column_type=Text
+    )
+    
+    check_column_constraints(
+        ChatSession, "post_prompt_enabled", nullable=False, column_type=Boolean
+    )
 
 
 def test_chat_session_initialization(
@@ -201,33 +255,48 @@ def test_chat_session_foreign_key_constraints(
     db_session.add_all([character, user_profile, ai_model, system_prompt])
     db_session.commit()
 
-    # Test invalid foreign key for character_id
-    invalid_character_id = 999999  # Non-existent ID
-    session_invalid_char = ChatSession(
-        character_id=invalid_character_id,
-        user_profile_id=user_profile.id,
-        ai_model_id=ai_model.id,
-        system_prompt_id=system_prompt.id,
+    # Create a valid ChatSession factory function for the test
+    def create_valid_session(**kwargs):
+        valid_fields = {
+            "character_id": character.id,
+            "user_profile_id": user_profile.id,
+            "ai_model_id": ai_model.id,
+            "system_prompt_id": system_prompt.id,
+        }
+        valid_fields.update(kwargs)
+        return ChatSession(**valid_fields)
+
+    # Test character_id foreign key constraint
+    check_foreign_key_constraint(
+        db_session=db_session,
+        model_factory=create_valid_session,
+        fk_field="character_id",
+        invalid_id=999999
     )
-    db_session.add(session_invalid_char)
 
-    with pytest.raises(IntegrityError):
-        db_session.commit()
-    db_session.rollback()
-
-    # Test invalid foreign key for user_profile_id
-    invalid_profile_id = 999999  # Non-existent ID
-    session_invalid_profile = ChatSession(
-        character_id=character.id,
-        user_profile_id=invalid_profile_id,
-        ai_model_id=ai_model.id,
-        system_prompt_id=system_prompt.id,
+    # Test user_profile_id foreign key constraint
+    check_foreign_key_constraint(
+        db_session=db_session,
+        model_factory=create_valid_session,
+        fk_field="user_profile_id",
+        invalid_id=999999
     )
-    db_session.add(session_invalid_profile)
 
-    with pytest.raises(IntegrityError):
-        db_session.commit()
-    db_session.rollback()
+    # Test ai_model_id foreign key constraint
+    check_foreign_key_constraint(
+        db_session=db_session,
+        model_factory=create_valid_session,
+        fk_field="ai_model_id",
+        invalid_id=999999
+    )
+
+    # Test system_prompt_id foreign key constraint
+    check_foreign_key_constraint(
+        db_session=db_session,
+        model_factory=create_valid_session,
+        fk_field="system_prompt_id",
+        invalid_id=999999
+    )
 
 
 def test_chat_session_relationships(
@@ -236,6 +305,7 @@ def test_chat_session_relationships(
     create_user_profile,
     create_ai_model,
     create_system_prompt,
+    create_chat_session,
 ):
     """Test ChatSession model relationships."""
     # Create parent entities
@@ -248,11 +318,11 @@ def test_chat_session_relationships(
     db_session.commit()
 
     # Create chat session
-    chat_session = ChatSession(
-        character_id=character.id,
-        user_profile_id=user_profile.id,
-        ai_model_id=ai_model.id,
-        system_prompt_id=system_prompt.id,
+    chat_session = create_chat_session(
+        character=character,
+        user_profile=user_profile,
+        ai_model=ai_model,
+        system_prompt=system_prompt,
     )
     db_session.add(chat_session)
     db_session.commit()
@@ -286,6 +356,7 @@ def test_chat_session_message_relationship(
     create_user_profile,
     create_ai_model,
     create_system_prompt,
+    create_chat_session,
 ):
     """Test ChatSession relationship with messages."""
     # Create parent entities
@@ -298,11 +369,11 @@ def test_chat_session_message_relationship(
     db_session.commit()
 
     # Create chat session
-    chat_session = ChatSession(
-        character_id=character.id,
-        user_profile_id=user_profile.id,
-        ai_model_id=ai_model.id,
-        system_prompt_id=system_prompt.id,
+    chat_session = create_chat_session(
+        character=character,
+        user_profile=user_profile,
+        ai_model=ai_model,
+        system_prompt=system_prompt,
     )
     db_session.add(chat_session)
     db_session.commit()
@@ -311,12 +382,27 @@ def test_chat_session_message_relationship(
     message1 = Message(
         chat_session_id=chat_session.id, role=MessageRole.USER, content="Hello there!"
     )
+    db_session.add(message1)
+    db_session.commit()
+
+    # Test relationship with first message
+    check_relationship(
+        db_session=db_session,
+        parent_obj=chat_session,
+        child_obj=message1,
+        parent_attr="messages",
+        child_attr="chat_session",
+        is_collection=True,
+        bidirectional=True
+    )
+
+    # Create another message
     message2 = Message(
         chat_session_id=chat_session.id,
         role=MessageRole.ASSISTANT,
         content="Hi! How can I help you today?",
     )
-    db_session.add_all([message1, message2])
+    db_session.add(message2)
     db_session.commit()
 
     # Test relationship with messages
@@ -333,11 +419,6 @@ def test_chat_session_message_relationship(
     assert MessageRole.USER in message_roles
     assert MessageRole.ASSISTANT in message_roles
 
-    # Test bidirectional relationship
-    for message in messages:
-        assert message.chat_session_id == chat_session.id
-        assert message.chat_session == chat_session
-
 
 def test_chat_session_cascade_delete(
     db_session,
@@ -345,6 +426,7 @@ def test_chat_session_cascade_delete(
     create_user_profile,
     create_ai_model,
     create_system_prompt,
+    create_chat_session,
 ):
     """Test ChatSession cascade delete behavior with messages."""
     # Create parent entities
@@ -357,38 +439,31 @@ def test_chat_session_cascade_delete(
     db_session.commit()
 
     # Create chat session
-    chat_session = ChatSession(
-        character_id=character.id,
-        user_profile_id=user_profile.id,
-        ai_model_id=ai_model.id,
-        system_prompt_id=system_prompt.id,
+    chat_session = create_chat_session(
+        character=character,
+        user_profile=user_profile,
+        ai_model=ai_model,
+        system_prompt=system_prompt,
     )
     db_session.add(chat_session)
     db_session.commit()
 
     # Create messages for this chat session
-    message1 = Message(
-        chat_session_id=chat_session.id, role=MessageRole.USER, content="Test message 1"
+    message = Message(
+        chat_session_id=chat_session.id, role=MessageRole.USER, content="Test message"
     )
-    message2 = Message(
-        chat_session_id=chat_session.id,
-        role=MessageRole.ASSISTANT,
-        content="Test message 2",
-    )
-    db_session.add_all([message1, message2])
+    db_session.add(message)
     db_session.commit()
 
-    # Store message IDs for verification
-    message_ids = [message1.id, message2.id]
-
-    # Delete the chat session
-    db_session.delete(chat_session)
-    db_session.commit()
-
-    # Verify messages were deleted (cascade delete)
-    for message_id in message_ids:
-        deleted_message = db_session.query(Message).filter_by(id=message_id).first()
-        assert deleted_message is None
+    # Test cascade delete with helper
+    check_cascade_delete(
+        db_session=db_session,
+        parent_obj=chat_session,
+        child_obj=message,
+        parent_attr="messages",
+        child_attr="chat_session",
+        child_class=Message
+    )
 
 
 def test_chat_session_cascade_delete_with_character(
@@ -397,6 +472,7 @@ def test_chat_session_cascade_delete_with_character(
     create_user_profile,
     create_ai_model,
     create_system_prompt,
+    create_chat_session,
 ):
     """Test ChatSession cascade delete when character is deleted."""
     # Create parent entities
@@ -409,27 +485,24 @@ def test_chat_session_cascade_delete_with_character(
     db_session.commit()
 
     # Create chat session
-    chat_session = ChatSession(
-        character_id=character.id,
-        user_profile_id=user_profile.id,
-        ai_model_id=ai_model.id,
-        system_prompt_id=system_prompt.id,
+    chat_session = create_chat_session(
+        character=character,
+        user_profile=user_profile,
+        ai_model=ai_model,
+        system_prompt=system_prompt,
     )
     db_session.add(chat_session)
     db_session.commit()
 
-    # Store chat session ID for verification
-    chat_session_id = chat_session.id
-
-    # Delete the character (should cascade delete the chat session)
-    db_session.delete(character)
-    db_session.commit()
-
-    # Verify chat session was deleted (cascade delete)
-    deleted_session = (
-        db_session.query(ChatSession).filter_by(id=chat_session_id).first()
+    # Test cascade delete from character to chat session
+    check_cascade_delete(
+        db_session=db_session,
+        parent_obj=character,
+        child_obj=chat_session,
+        parent_attr="chat_sessions",
+        child_attr="character",
+        child_class=ChatSession
     )
-    assert deleted_session is None
 
 
 def test_chat_session_representation(
@@ -438,6 +511,7 @@ def test_chat_session_representation(
     create_user_profile,
     create_ai_model,
     create_system_prompt,
+    create_chat_session,
 ):
     """Test ChatSession model string representation."""
     # Create parent entities
@@ -450,18 +524,20 @@ def test_chat_session_representation(
     db_session.commit()
 
     # Create chat session
-    chat_session = ChatSession(
-        character_id=character.id,
-        user_profile_id=user_profile.id,
-        ai_model_id=ai_model.id,
-        system_prompt_id=system_prompt.id,
+    chat_session = create_chat_session(
+        character=character,
+        user_profile=user_profile,
+        ai_model=ai_model,
+        system_prompt=system_prompt,
     )
     db_session.add(chat_session)
     db_session.commit()
 
-    # Test __repr__ method
-    repr_string = repr(chat_session)
-    assert "ChatSession" in repr_string
-    assert f"id={chat_session.id}" in repr_string
-    assert f"character_id={character.id}" in repr_string
-    assert f"user_profile_id={user_profile.id}" in repr_string
+    # Test representation using helper
+    expected_attrs = {
+        "id": chat_session.id,
+        "character_id": character.id,
+        "user_profile_id": user_profile.id
+    }
+    
+    check_model_repr(chat_session, expected_attrs)
