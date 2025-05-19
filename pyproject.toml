@@ -42,6 +42,9 @@ include = '\.pyi?$'
 profile = "black"
 line_length = 88
 multi_line_output = 3
+known_first_party = ["app"]
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+default_section = "THIRDPARTY"
 
 [tool.mypy]
 python_version = "3.10"
@@ -64,3 +67,11 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "alembic.*"
 ignore_missing_imports = true
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203"]
+exclude = [".git", "__pycache__", "*.pyc", ".tox", ".eggs", "*.egg"]
+per-file-ignores = [
+    "scripts/generate_test_data.py:E501"
+]

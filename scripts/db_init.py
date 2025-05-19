@@ -4,15 +4,16 @@ This script initializes the database using SQLAlchemy models.
 It creates all tables defined in the models and optionally loads sample data.
 """
 
-import argparse
 import sys
 from pathlib import Path
 
 # Add the parent directory to sys.path to allow imports from the app package
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.models.base import Base  # noqa
-from app.utils.db import engine  # noqa
+import argparse
+
+from app.models.base import Base
+from app.utils.db import engine
 
 
 def init_db(load_sample_data: bool = False) -> None:

@@ -1,7 +1,7 @@
 """ApplicationSettings model for the application.
 
-This module defines the ApplicationSettings model representing global application settings.
-It is designed as a singleton table with only one row.
+This module defines the ApplicationSettings model representing global application
+settings. It is designed as a singleton table with only one row.
 """
 
 from typing import TYPE_CHECKING, Optional

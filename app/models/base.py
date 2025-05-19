@@ -53,7 +53,8 @@ class TimestampMixin:
         """Last update timestamp for the record.
 
         Returns:
-            Column: SQLAlchemy Column with default value and onupdate set to current timestamp.
+            Column: SQLAlchemy Column with default value and onupdate
+            set to current timestamp.
         """
         return Column(
             DateTime,
