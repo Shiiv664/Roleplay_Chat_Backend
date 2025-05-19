@@ -52,7 +52,7 @@ This roadmap provides implementation guidance for the database and backend found
 
 ## SQLAlchemy Models Implementation
 
-Follow the structure defined in `technical_architecture.md` under "SQLAlchemy ORM Models" section.
+Follow the structure defined in `technical_architecture.md` under "SQLAlchemy ORM Models" section and implement the data model based on the schema defined in `database_schema.sql`.
 
 ### Implementation Order
 
@@ -77,9 +77,9 @@ Implement models in this dependency order:
 ### Model Implementation Details
 
 For each model:
-- [ ] Define table name and columns with appropriate types
-- [ ] Add constraints (unique, non-null, etc.)
-- [ ] Implement relationships between models
+- [ ] Define table name and columns with appropriate types following the definitions in `database_schema.sql`
+- [ ] Add constraints (unique, non-null, etc.) as specified in `database_schema.sql`
+- [ ] Implement relationships between models according to foreign key relationships in `database_schema.sql`
 - [ ] Add any model-specific methods
 - [ ] Set up validation at the SQLAlchemy model level (confirmed approach)
 - [ ] Create corresponding unit tests following testing_strategy.md, including:
