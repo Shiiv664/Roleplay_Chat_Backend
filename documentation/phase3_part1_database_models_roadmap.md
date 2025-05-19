@@ -63,9 +63,9 @@ Implement models in this dependency order:
    - [✓] SystemPrompt model (models/system_prompt.py)
 
 3. **Dependent Entity Models**
-   - [ ] ChatSession model (models/chat_session.py) - references characters, profiles, models, prompts
-   - [ ] Message model (models/message.py) - references chat sessions
-   - [ ] ApplicationSettings model (models/application_settings.py) - references default entities
+   - [✓] ChatSession model (models/chat_session.py) - references characters, profiles, models, prompts
+   - [✓] Message model (models/message.py) - references chat sessions
+   - [✓] ApplicationSettings model (models/application_settings.py) - references default entities
 
 ### Model Implementation Details
 
