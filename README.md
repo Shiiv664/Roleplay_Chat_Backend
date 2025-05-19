@@ -86,6 +86,27 @@ A roleplay chat client application that allows users to have conversations with 
    poetry run mypy app
    ```
 
+3. Running tests:
+   ```bash
+   # Run all tests
+   poetry run pytest
+
+   # Run tests with verbose output
+   poetry run pytest -v
+
+   # Run tests for a specific module
+   poetry run pytest tests/models/test_character.py
+
+   # Run a specific test
+   poetry run pytest tests/models/test_character.py::test_character_initialization
+
+   # Run tests with coverage report
+   poetry run pytest --cov=app
+
+   # Run tests with coverage report and generate HTML report
+   poetry run pytest --cov=app --cov-report=html
+   ```
+
 ## Project Structure
 
 ```
@@ -121,3 +142,5 @@ Additional documentation is available in the `documentation/` directory:
 - [Technical Architecture](documentation/technical_architecture.md)
 - [Database Schema](documentation/database_schema.sql)
 - [Global Roadmap](documentation/global_roadmap.md)
+- [Testing Strategy](documentation/testing_strategy.md)
+- [Phase 3 Database Testing Roadmap](documentation/phase3_part2_database_testing_roadmap.md)
