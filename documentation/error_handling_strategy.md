@@ -100,7 +100,7 @@ def create_entity(self, data):
     # Validate business rules
     if not self._is_valid_entity(data):
         raise ValidationError("Invalid entity data", details={"invalid_fields": self._get_invalid_fields(data)})
-        
+
     try:
         # Create entity in repository
         return self.repository.create(**data)
@@ -133,11 +133,11 @@ def handle_app_error(error):
         "error": error.message,
         "type": error.__class__.__name__
     }
-    
+
     # Add details if available and not sensitive
     if hasattr(error, 'details') and error.details:
         response["details"] = error.details
-        
+
     # Map exception types to status codes
     if isinstance(error, ResourceNotFoundError):
         status_code = 404
@@ -149,7 +149,7 @@ def handle_app_error(error):
         status_code = 502
     else:
         status_code = 500
-        
+
     return jsonify(response), status_code
 ```
 
@@ -235,7 +235,7 @@ This simple logging approach can be enhanced later to include more structured co
    class StructuredLogger:
        def __init__(self, name):
            self.logger = logging.getLogger(name)
-           
+
        def error(self, message, **kwargs):
            context = json.dumps(kwargs) if kwargs else ""
            self.logger.error(f"{message} {context}")
@@ -245,7 +245,7 @@ This simple logging approach can be enhanced later to include more structured co
    ```python
    # Before
    logger.error(f"Failed to get character with ID {character_id}: {str(e)}")
-   
+
    # After
    logger.error("Failed to get character", character_id=character_id, error=str(e))
    ```
@@ -277,13 +277,13 @@ Notes:
 ```python
 class Character(Base):
     __tablename__ = 'character'
-    
+
     id = Column(Integer, primary_key=True)
     label = Column(String, nullable=False, unique=True)
     name = Column(String, nullable=False)
     avatar_image = Column(String)
     description = Column(Text)
-    
+
     # No exception handling at model level
 ```
 
@@ -294,7 +294,7 @@ class CharacterRepository(BaseRepository):
     def __init__(self, session):
         self.session = session
         self.logger = logging.getLogger(__name__)
-        
+
     def get_by_id(self, character_id):
         try:
             character = self.session.query(Character).filter(Character.id == character_id).first()
@@ -304,7 +304,7 @@ class CharacterRepository(BaseRepository):
         except SQLAlchemyError as e:
             self.logger.error(f"Failed to get character with ID {character_id}: {str(e)}")
             raise DatabaseError(f"Error retrieving character: {str(e)}")
-            
+
     def create(self, label, name, avatar_image=None, description=None):
         try:
             character = Character(
@@ -335,15 +335,15 @@ class CharacterService:
     def __init__(self, repository):
         self.repository = repository
         self.logger = logging.getLogger(__name__)
-        
+
     def create_character(self, label, name, avatar_image=None, description=None):
         # Validate data
         if not label or not name:
             raise ValidationError("Character label and name are required")
-            
+
         if len(label) < 3:
             raise ValidationError("Character label must be at least 3 characters")
-            
+
         try:
             return self.repository.create(label, name, avatar_image, description)
         except (ValidationError, DatabaseError) as e:
@@ -360,20 +360,20 @@ With global error handlers in place, route implementations become much simpler, 
 @app.route('/api/characters', methods=['POST'])
 def create_character():
     data = request.json
-    
+
     # Basic request validation
     if not data:
         return jsonify({"error": "No data provided"}), 400
-        
+
     # Extract data
     label = data.get('label')
     name = data.get('name')
     avatar_image = data.get('avatar_image')
     description = data.get('description')
-    
+
     # Call service - any exceptions will be caught by global handlers
     character = character_service.create_character(label, name, avatar_image, description)
-    
+
     # Return response
     return jsonify({
         "id": character.id,
@@ -444,7 +444,7 @@ def handle_app_error(error):
         "error": str(error),
         "type": error.__class__.__name__
     }), 500
-    
+
 # Handle uncaught exceptions
 @app.errorhandler(Exception)
 def handle_unexpected_error(error):
@@ -499,20 +499,20 @@ def test_character_repository_not_found():
     session = MagicMock()
     session.query.return_value.filter.return_value.first.return_value = None
     repo = CharacterRepository(session)
-    
+
     # Test
     with pytest.raises(ResourceNotFoundError):
         repo.get_by_id(999)
-        
+
 def test_character_service_validation():
     # Setup
     repo = MagicMock()
     service = CharacterService(repo)
-    
+
     # Test
     with pytest.raises(ValidationError):
         service.create_character("", "")  # Empty values should fail validation
-    
+
     # Verify repository was not called
     repo.create.assert_not_called()
 ```
@@ -527,10 +527,10 @@ def test_validation_error_handler(client):
     @app.route('/test_validation_error')
     def raise_validation_error():
         raise ValidationError("Test validation error")
-        
+
     # Test
     response = client.get('/test_validation_error')
-    
+
     # Assert
     assert response.status_code == 400
     data = json.loads(response.data)
@@ -542,10 +542,10 @@ def test_not_found_error_handler(client):
     @app.route('/test_not_found_error')
     def raise_not_found_error():
         raise ResourceNotFoundError("Resource not found")
-        
+
     # Test
     response = client.get('/test_not_found_error')
-    
+
     # Assert
     assert response.status_code == 404
     data = json.loads(response.data)

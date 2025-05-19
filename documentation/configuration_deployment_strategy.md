@@ -55,18 +55,18 @@ class BaseConfig:
     APP_NAME = "Roleplay Chat"
     DEFAULT_PAGE_SIZE = 50
     MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # 10MB
-    
+
     # Database settings
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///app.db")
-    
+
     # Logging
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-    
+
     # API settings
     OPENROUTER_API_BASE_URL = "https://openrouter.ai/api/v1"
     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-    
+
     # Default models
     DEFAULT_AI_MODELS = [
         {"id": "anthropic/claude-3-opus-20240229", "name": "Claude 3 Opus"},
@@ -119,14 +119,14 @@ Create a function to load and validate configuration:
 def load_config():
     """Load and validate application configuration."""
     config = get_config()
-    
+
     # Validate required settings
     required_settings = ["OPENROUTER_API_KEY"]
     missing = [setting for setting in required_settings if not getattr(config, setting)]
-    
+
     if missing:
         raise ValueError(f"Missing required configuration settings: {', '.join(missing)}")
-    
+
     return config
 ```
 
@@ -179,10 +179,10 @@ Create a clear initialization function for the application:
 def create_app(test_config=None):
     """Create and configure the Flask application."""
     from flask import Flask
-    
+
     # Create Flask app
     app = Flask(__name__)
-    
+
     # Load configuration
     if test_config:
         # Use test configuration if provided
@@ -191,19 +191,19 @@ def create_app(test_config=None):
         # Load regular configuration
         config = load_config()
         app.config.from_object(config)
-    
+
     # Initialize database
     from .models import init_db
     init_db(app)
-    
+
     # Register blueprints
     from .api import register_blueprints
     register_blueprints(app)
-    
+
     # Configure logging
     from .utils.logging import configure_logging
     configure_logging(app)
-    
+
     return app
 ```
 
@@ -219,18 +219,18 @@ For local development and usage:
    ```bash
    #!/bin/bash
    # setup.sh - Local installation script
-   
+
    # Create virtual environment
    python -m venv venv
    source venv/bin/activate
-   
+
    # Install dependencies
    pip install -e .
-   
+
    # Set up initial database
    flask db upgrade
    flask seed  # Custom command to seed initial data
-   
+
    echo "Setup complete. Run 'flask run' to start the application."
    ```
 
@@ -238,7 +238,7 @@ For local development and usage:
    ```bash
    #!/bin/bash
    # run.sh - Local run script
-   
+
    source venv/bin/activate
    flask run
    ```
@@ -299,14 +299,14 @@ def validate_config(app):
     # Check required settings
     required_settings = ["OPENROUTER_API_KEY", "DATABASE_URL"]
     missing = [setting for setting in required_settings if not app.config.get(setting)]
-    
+
     if missing:
         raise ValueError(f"Missing required configuration: {', '.join(missing)}")
-    
+
     # Validate specific settings
     if app.config.get("MAX_MESSAGE_LENGTH", 0) <= 0:
         raise ValueError("MAX_MESSAGE_LENGTH must be a positive integer")
-    
+
     # Test external connections if appropriate
     if not app.config.get("TESTING"):
         # Test database connection
@@ -325,26 +325,26 @@ Configure your application to adapt to different environments:
 def configure_app_for_environment(app):
     """Configure environment-specific behaviors."""
     env = app.config.get("ENV", "development")
-    
+
     if env == "development":
         # Development-specific setup
         app.config["TEMPLATES_AUTO_RELOAD"] = True
-        
+
         # Enable interactive debugger
         app.debug = True
-        
+
         # Use development-specific logging
         configure_dev_logging(app)
-        
+
     elif env == "testing":
         # Testing-specific setup
         app.config["WTF_CSRF_ENABLED"] = False
         app.config["TESTING"] = True
-        
+
     elif env == "production":
         # Production-specific setup
         configure_prod_logging(app)
-        
+
         # Set up production error handling
         register_error_handlers(app)
 ```

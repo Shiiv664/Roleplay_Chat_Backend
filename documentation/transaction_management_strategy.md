@@ -25,19 +25,19 @@ class CharacterService:
     def __init__(self, session):
         self.session = session
         self.repo = CharacterRepository(session)
-    
+
     def create_character(self, data):
         try:
             # Validate data
             if not self._validate_character_data(data):
                 raise ValidationError("Invalid character data")
-            
+
             # Perform database operations
             character = self.repo.create(data)
-            
+
             # Commit the transaction
             self.session.commit()
-            
+
             return character
         except Exception as e:
             # Rollback on any exception
@@ -72,7 +72,7 @@ def complex_operation(session, data):
         character = character_service.create_character(data["character"])
         profile = profile_service.create_profile(data["profile"])
         chat_session = chat_service.create_session(character.id, profile.id)
-        
+
         return chat_session
 ```
 
@@ -108,12 +108,12 @@ def with_retry(max_retries=3, retry_on=(DBAPIError, OperationalError)):
                     retries += 1
                     if retries > max_retries:
                         raise
-                    
+
                     # Exponential backoff with jitter
                     backoff = (2 ** retries) * 0.1
                     jitter = random.uniform(0, 0.1)
                     time.sleep(backoff + jitter)
-                    
+
                     # Log retry attempt
                     print(f"Retrying operation after error: {str(e)} (attempt {retries}/{max_retries})")
         return wrapper
@@ -152,7 +152,7 @@ def create_character_idempotent(self, data):
         existing = self.repo.get_by_label(data["label"])
         if existing:
             return existing
-            
+
         # Create new character
         character = self.repo.create(data)
         self.session.commit()
@@ -254,13 +254,13 @@ def get_session():
        # Create in-memory engine and tables
        engine = create_engine("sqlite:///:memory:")
        Base.metadata.create_all(engine)
-       
+
        # Create session
        Session = sessionmaker(bind=engine)
        session = Session()
-       
+
        yield session
-       
+
        # Rollback and close after test
        session.rollback()
        session.close()
@@ -271,18 +271,18 @@ def get_session():
    def test_transaction_rollback(db_session):
        repo = CharacterRepository(db_session)
        service = CharacterService(db_session)
-       
+
        # Create a character that should succeed
        character = repo.create({"label": "test", "name": "Test Character"})
        db_session.commit()
-       
+
        # Try an operation that should fail and rollback
        try:
            service.create_character({"label": "test", "name": "Duplicate"})  # Should fail due to unique constraint
            assert False, "Expected unique constraint violation"
        except Exception:
            pass
-           
+
        # Verify the failed transaction was rolled back
        characters = repo.get_all()
        assert len(characters) == 1

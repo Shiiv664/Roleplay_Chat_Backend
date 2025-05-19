@@ -1,6 +1,7 @@
 """Base SQLAlchemy model and declarative base configuration."""
+
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Dict
 
 from sqlalchemy import Column, DateTime, func
 from sqlalchemy.ext.declarative import declared_attr
@@ -29,7 +30,9 @@ class Base(DeclarativeBase):
         Returns:
             Base: New model instance.
         """
-        return cls(**{k: v for k, v in data.items() if k in cls.__table__.columns.keys()})
+        column_keys = cls.__table__.columns.keys()
+        filtered_data = {k: v for k, v in data.items() if k in column_keys}
+        return cls(**filtered_data)
 
 
 @declarative_mixin

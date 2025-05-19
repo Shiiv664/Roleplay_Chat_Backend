@@ -3,11 +3,12 @@
 This module defines the ChatSession model representing a roleplay chat session
 between a user profile and a character, using a specific AI model and system prompt.
 """
+
 from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, Text, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, relationship
 
 from app.models.base import Base
 
@@ -36,12 +37,12 @@ class ChatSession(Base):
         DateTime, default=func.current_timestamp(), nullable=False
     )
     updated_at: Mapped[datetime] = Column(
-        DateTime, 
+        DateTime,
         default=func.current_timestamp(),
         onupdate=func.current_timestamp(),
-        nullable=False
+        nullable=False,
     )
-    
+
     # Foreign keys
     character_id: Mapped[int] = Column(
         Integer, ForeignKey("character.id", ondelete="CASCADE"), nullable=False
@@ -55,25 +56,28 @@ class ChatSession(Base):
     system_prompt_id: Mapped[int] = Column(
         Integer, ForeignKey("systemPrompt.id", ondelete="SET NULL"), nullable=False
     )
-    
+
     # Additional fields
     pre_prompt: Mapped[Optional[str]] = Column(Text, nullable=True)
     pre_prompt_enabled: Mapped[bool] = Column(Boolean, default=False, nullable=False)
     post_prompt: Mapped[Optional[str]] = Column(Text, nullable=True)
     post_prompt_enabled: Mapped[bool] = Column(Boolean, default=False, nullable=False)
-    
+
     # Relationships
     character = relationship("Character", back_populates="chat_sessions")
     user_profile = relationship("UserProfile", back_populates="chat_sessions")
     ai_model = relationship("AIModel", back_populates="chat_sessions")
     system_prompt = relationship("SystemPrompt", back_populates="chat_sessions")
     messages = relationship(
-        "Message", back_populates="chat_session", cascade="all, delete-orphan", lazy="dynamic"
+        "Message",
+        back_populates="chat_session",
+        cascade="all, delete-orphan",
+        lazy="dynamic",
     )
 
     def __repr__(self) -> str:
         """Return string representation of the chat session.
-        
+
         Returns:
             String representation.
         """

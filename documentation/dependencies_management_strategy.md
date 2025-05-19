@@ -206,7 +206,7 @@ Follow this process when updating dependencies:
    ```bash
    # Update a specific package
    poetry update flask
-   
+
    # Update only patch versions
    poetry update --dry-run
    ```
@@ -230,7 +230,7 @@ For security-related updates:
    ```bash
    # Install pip-audit
    pip install pip-audit
-   
+
    # Check for vulnerabilities
    pip-audit
    ```

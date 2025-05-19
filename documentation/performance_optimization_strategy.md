@@ -23,7 +23,7 @@ Proper indexing is one of the most effective ways to improve database performanc
 # Example of indexing a foreign key in SQLAlchemy
 class Message(Base):
     __tablename__ = 'message'
-    
+
     id = Column(Integer, primary_key=True)
     chat_session_id = Column(Integer, ForeignKey('chat_session.id'), index=True)
     # Other columns...
@@ -45,9 +45,9 @@ Create composite indexes for queries that frequently filter or sort by multiple 
 # Example of a composite index in SQLAlchemy
 class Character(Base):
     __tablename__ = 'character'
-    
+
     # Columns...
-    
+
     # Create a composite index for commonly used filters
     __table_args__ = (
         Index('ix_character_label_name', 'label', 'name'),
@@ -184,7 +184,7 @@ class ApplicationSettingsService:
     def get_global_settings(self):
         """Retrieve global application settings, cached in memory."""
         return self.repository.get_settings()
-    
+
     def update_settings(self, new_settings):
         """Update settings and invalidate cache."""
         result = self.repository.update_settings(new_settings)
@@ -213,7 +213,7 @@ As the application grows, a more structured caching approach can be implemented:
    def get_character(character_id):
        if character_id in character_cache:
            return character_cache[character_id]
-           
+
        character = repository.get_character(character_id)
        character_cache[character_id] = character
        return character
@@ -230,10 +230,10 @@ As the application grows, a more structured caching approach can be implemented:
    def get_cached_character(character_id):
        cache_key = f"character:{character_id}"
        cached = redis_client.get(cache_key)
-       
+
        if cached:
            return json.loads(cached)
-           
+
        character = repository.get_character(character_id)
        redis_client.setex(
            cache_key,
@@ -253,18 +253,18 @@ from flask import make_response, request
 @app.route('/api/characters/<int:character_id>')
 def get_character(character_id):
     character = character_service.get_character(character_id)
-    
+
     # Generate ETag based on character data
     etag = generate_etag(character)
-    
+
     # Check if client has current version
     if request.headers.get('If-None-Match') == etag:
         return '', 304  # Not Modified
-        
+
     response = make_response(jsonify(character.to_dict()))
     response.headers['ETag'] = etag
     response.headers['Cache-Control'] = 'max-age=300'  # Cache for 5 minutes
-    
+
     return response
 ```
 
@@ -301,12 +301,12 @@ def log_slow_operation(func):
         start_time = time.time()
         result = func(*args, **kwargs)
         execution_time = time.time() - start_time
-        
+
         if execution_time > 0.5:  # Log operations taking more than 500ms
             logger.warning(
                 f"Slow operation: {func.__name__} took {execution_time:.2f}s"
             )
-            
+
         return result
     return wrapper
 
@@ -326,12 +326,12 @@ import time
 def test_message_list_performance():
     # Setup test data
     session = create_test_session_with_many_messages(1000)  # Create 1000 messages
-    
+
     # Measure performance
     start_time = time.time()
     messages = message_service.get_recent_messages(session.id, limit=50)
     execution_time = time.time() - start_time
-    
+
     # Assert on performance expectations
     assert execution_time < 0.1, f"Message retrieval took {execution_time:.2f}s, expected < 0.1s"
     assert len(messages) == 50

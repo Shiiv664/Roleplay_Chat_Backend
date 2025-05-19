@@ -1,4 +1,5 @@
 """Main application entry point."""
+
 from flask import Flask
 
 from app.config import get_config

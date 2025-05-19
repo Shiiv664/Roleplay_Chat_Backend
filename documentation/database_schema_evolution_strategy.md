@@ -31,16 +31,16 @@ target_metadata = Base.metadata  # Reference to SQLAlchemy models
    ```bash
    alembic revision --autogenerate -m "description of changes"
    ```
-   
+
 2. **Review and Edit**: Always review auto-generated scripts before applying them.
    - Alembic may not detect all changes (e.g., data type changes)
    - Ensure migrations are correct and include necessary data migrations
-   
+
 3. **Apply Migration**:
    ```bash
    alembic upgrade head
    ```
-   
+
 4. **Version Control**: Commit migration scripts to your version control system
 
 ## Handling Schema Changes
@@ -89,7 +89,7 @@ Example:
 def upgrade():
     # Add new column
     op.add_column('user_profile', sa.Column('user_name', sa.String(), nullable=True))
-    
+
     # Copy data from old to new column
     op.execute("UPDATE user_profile SET user_name = username")
 
@@ -111,16 +111,16 @@ Ensure all data is properly migrated from old to new structures. This can be:
    # Example of a separate data migration script
    from sqlalchemy.orm import Session
    from your_application.models import UserProfile
-   
+
    def migrate_usernames(session):
        profiles = session.query(UserProfile).filter(
            UserProfile.user_name.is_(None),
            UserProfile.username.isnot(None)
        ).all()
-       
+
        for profile in profiles:
            profile.user_name = profile.username
-       
+
        session.commit()
    ```
 
@@ -133,7 +133,7 @@ Once all data is migrated and the application no longer relies on old structures
 def upgrade():
     # Make new column non-nullable if needed
     op.alter_column('user_profile', 'user_name', nullable=False)
-    
+
     # Remove old column
     op.drop_column('user_profile', 'username')
 
@@ -156,7 +156,7 @@ Suitable for:
 def upgrade():
     # Add a new column
     op.add_column('character', sa.Column('display_name', sa.String(), nullable=True))
-    
+
     # Populate the new column with data derived from existing columns
     op.execute("UPDATE character SET display_name = name WHERE display_name IS NULL")
 ```
@@ -178,13 +178,13 @@ def migrate_character_names():
     engine = create_engine('sqlite:///./app.db')
     Session = sessionmaker(bind=engine)
     session = Session()
-    
+
     try:
         characters = session.query(Character).filter(Character.display_name.is_(None)).all()
-        
+
         for character in characters:
             character.display_name = character.name.title()  # Apply more complex logic
-        
+
         session.commit()
         print(f"Migrated {len(characters)} character names")
     except Exception as e:

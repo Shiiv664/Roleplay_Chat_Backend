@@ -1,1 +1,1 @@
-\\\Tests for the repositories module.\\\
+"""Tests for the repositories module."""

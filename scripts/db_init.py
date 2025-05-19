@@ -3,8 +3,8 @@
 This script initializes the database using SQLAlchemy models.
 It creates all tables defined in the models and optionally loads sample data.
 """
+
 import argparse
-import os
 import sys
 from pathlib import Path
 
@@ -26,10 +26,9 @@ def init_db(load_sample_data: bool = False) -> None:
     print("Database tables created successfully.")
 
     if load_sample_data:
-        # Sample data loading will be implemented later
-        # from scripts.generate_test_data import load_sample_data
-        # load_sample_data()
-        print("Sample data would be loaded here (not yet implemented).")
+        from scripts.generate_test_data import load_sample_data
+
+        load_sample_data()
 
 
 if __name__ == "__main__":

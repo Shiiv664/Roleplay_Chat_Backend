@@ -3,6 +3,7 @@
 This module defines the UserProfile model representing user profiles
 that can be used in roleplay chat sessions.
 """
+
 from sqlalchemy import Column, Integer, String, Text
 from sqlalchemy.orm import Mapped, relationship
 
@@ -11,7 +12,7 @@ from app.models.base import Base, TimestampMixin
 
 class UserProfile(Base, TimestampMixin):
     """User Profile model for roleplay chat sessions.
-    
+
     Attributes:
         id: Unique identifier for the user profile.
         label: Unique label used to identify the user profile in the system.
@@ -32,10 +33,10 @@ class UserProfile(Base, TimestampMixin):
 
     # Relationships - we'll define these properly when implementing ChatSession
     chat_sessions = relationship(
-        "ChatSession", 
-        back_populates="user_profile", 
+        "ChatSession",
+        back_populates="user_profile",
         cascade="all, delete-orphan",
-        lazy="dynamic"
+        lazy="dynamic",
     )
 
     # For application settings relationship
@@ -47,7 +48,7 @@ class UserProfile(Base, TimestampMixin):
 
     def __repr__(self) -> str:
         """Return string representation of the user profile.
-        
+
         Returns:
             String representation.
         """

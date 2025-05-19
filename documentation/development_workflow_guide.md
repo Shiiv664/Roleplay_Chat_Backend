@@ -26,13 +26,13 @@ For new features, bug fixes, or any code changes:
    ```bash
    # For new features
    git checkout -b feature/add-user-profiles
-   
+
    # For bug fixes
    git checkout -b fix/message-ordering-bug
-   
+
    # For refactoring
    git checkout -b refactor/restructure-services
-   
+
    # For documentation
    git checkout -b docs/add-api-docs
    ```
@@ -130,13 +130,13 @@ As a solo developer, implement a disciplined self-review process before merging 
    ```bash
    # Run tests
    pytest
-   
+
    # Run linters
    flake8
-   
+
    # Run type checking
    mypy
-   
+
    # Run code formatters
    black .
    isort .
@@ -236,7 +236,7 @@ Set up pre-commit hooks to enforce code quality standards:
      - id: end-of-file-fixer
      - id: check-yaml
      - id: check-added-large-files
-   
+
    - repo: https://github.com/pycqa/flake8
      rev: 6.0.0
      hooks:
@@ -247,17 +247,17 @@ Set up pre-commit hooks to enforce code quality standards:
        - flake8-pytest-style
        - flake8-docstrings
        - flake8-import-order
-   
+
    - repo: https://github.com/pycqa/isort
      rev: 5.12.0
      hooks:
      - id: isort
-   
+
    - repo: https://github.com/psf/black
      rev: 23.3.0
      hooks:
      - id: black
-   
+
    - repo: https://github.com/pre-commit/mirrors-mypy
      rev: v1.3.0
      hooks:

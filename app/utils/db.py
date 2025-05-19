@@ -1,4 +1,5 @@
 """Database utilities for SQLAlchemy session management."""
+
 from contextlib import contextmanager
 from typing import Generator
 

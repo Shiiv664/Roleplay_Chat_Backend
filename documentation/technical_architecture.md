@@ -246,7 +246,7 @@ from .base import Base
 
 class Character(Base):
     __tablename__ = 'character'
-    
+
     id = Column(Integer, primary_key=True)
     label = Column(String, nullable=False, unique=True)
     name = Column(String, nullable=False)
@@ -254,7 +254,7 @@ class Character(Base):
     description = Column(Text)
     created_at = Column(DateTime, default=func.current_timestamp())
     updated_at = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp())
-    
+
     # Relationships
     chat_sessions = relationship("ChatSession", back_populates="character", cascade="all, delete-orphan")
 ```
@@ -268,14 +268,14 @@ The repository pattern will abstract data access operations:
 class BaseRepository:
     def __init__(self, session):
         self.session = session
-    
+
     def add(self, entity):
         self.session.add(entity)
         return entity
-    
+
     def commit(self):
         self.session.commit()
-    
+
     def rollback(self):
         self.session.rollback()
 
@@ -283,10 +283,10 @@ class BaseRepository:
 class CharacterRepository(BaseRepository):
     def get_by_id(self, character_id):
         return self.session.query(Character).filter(Character.id == character_id).first()
-    
+
     def get_all(self):
         return self.session.query(Character).all()
-    
+
     def create(self, label, name, avatar_image=None, description=None):
         character = Character(
             label=label,

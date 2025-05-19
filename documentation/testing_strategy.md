@@ -62,10 +62,10 @@ def test_character_creation():
 def test_character_unique_constraint(db_session):
     character1 = Character(label="unique_char", name="Character 1")
     character2 = Character(label="unique_char", name="Character 2")
-    
+
     db_session.add(character1)
     db_session.commit()
-    
+
     db_session.add(character2)
     with pytest.raises(IntegrityError):
         db_session.commit()
@@ -87,10 +87,10 @@ Test repository implementations to ensure they correctly interact with the datab
 def test_character_repository_create(db_session):
     repo = CharacterRepository(db_session)
     character = repo.create(label="test_char", name="Test Character")
-    
+
     assert character.id is not None
     assert character.label == "test_char"
-    
+
     # Verify it was saved to the database
     db_character = db_session.query(Character).filter_by(id=character.id).first()
     assert db_character is not None
@@ -100,10 +100,10 @@ def test_character_repository_get_by_id(db_session):
     character = Character(label="test_char", name="Test Character")
     db_session.add(character)
     db_session.commit()
-    
+
     repo = CharacterRepository(db_session)
     result = repo.get_by_id(character.id)
-    
+
     assert result is not None
     assert result.id == character.id
     assert result.label == "test_char"
@@ -131,31 +131,31 @@ def test_character_service_create(mocker):
     # Mock the repository
     mock_repo = mocker.MagicMock()
     mock_repo.create.return_value = Character(id=1, label="test_char", name="Test Character")
-    
+
     # Create service with mocked repository
     service = CharacterService(mock_repo)
-    
+
     # Test service method
     character = service.create_character("test_char", "Test Character")
-    
+
     # Verify results
     assert character.id == 1
     assert character.label == "test_char"
-    
+
     # Verify repository was called correctly
     mock_repo.create.assert_called_once_with(label="test_char", name="Test Character")
 
 def test_character_service_validation(mocker):
     # Mock the repository
     mock_repo = mocker.MagicMock()
-    
+
     # Create service with mocked repository
     service = CharacterService(mock_repo)
-    
+
     # Test validation failure
     with pytest.raises(ValueError):
         service.create_character("", "")  # Empty values should fail validation
-    
+
     # Verify repository was not called
     mock_repo.create.assert_not_called()
 ```
@@ -185,18 +185,18 @@ def test_create_character_endpoint(client, mocker):
     mock_service.return_value.create_character.return_value = Character(
         id=1, label="test_char", name="Test Character"
     )
-    
+
     # Test API call
     response = client.post(
-        '/api/characters', 
+        '/api/characters',
         json={'label': 'test_char', 'name': 'Test Character'}
     )
-    
+
     # Verify response
     assert response.status_code == 201
     assert response.json['id'] == 1
     assert response.json['label'] == "test_char"
-    
+
     # Verify service was called
     mock_service.return_value.create_character.assert_called_once_with(
         "test_char", "Test Character"
@@ -205,16 +205,16 @@ def test_create_character_endpoint(client, mocker):
 def test_create_character_endpoint_validation(client, mocker):
     # Mock the service
     mock_service = mocker.patch('app.services.character_service.CharacterService')
-    
+
     # Test invalid input
     response = client.post(
-        '/api/characters', 
+        '/api/characters',
         json={'label': '', 'name': ''}  # Invalid data
     )
-    
+
     # Verify validation failure response
     assert response.status_code == 400
-    
+
     # Verify service was not called
     mock_service.return_value.create_character.assert_not_called()
 ```

@@ -3,6 +3,7 @@
 This module defines the AIModel model representing different AI models
 that can be used in roleplay chat sessions.
 """
+
 from sqlalchemy import Column, DateTime, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, relationship
 
@@ -11,7 +12,7 @@ from app.models.base import Base
 
 class AIModel(Base):
     """AI Model for roleplay chat sessions.
-    
+
     Attributes:
         id: Unique identifier for the AI model.
         label: Unique label used to identify the AI model in the system.
@@ -30,10 +31,10 @@ class AIModel(Base):
 
     # Relationships - we'll define these properly when implementing ChatSession
     chat_sessions = relationship(
-        "ChatSession", 
-        back_populates="ai_model", 
+        "ChatSession",
+        back_populates="ai_model",
         cascade="all, delete-orphan",
-        lazy="dynamic"
+        lazy="dynamic",
     )
 
     # For application settings relationship
@@ -45,7 +46,7 @@ class AIModel(Base):
 
     def __repr__(self) -> str:
         """Return string representation of the AI model.
-        
+
         Returns:
             String representation.
         """

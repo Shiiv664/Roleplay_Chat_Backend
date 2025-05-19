@@ -1,7 +1,8 @@
 """Configuration settings for the application."""
+
 import os
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict
 
 from dotenv import load_dotenv
 
@@ -43,9 +44,7 @@ class TestingConfig(Config):
     """Testing configuration."""
 
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "TEST_DATABASE_URL", "sqlite:///:memory:"
-    )
+    SQLALCHEMY_DATABASE_URI = os.getenv("TEST_DATABASE_URL", "sqlite:///:memory:")
 
 
 class ProductionConfig(Config):
