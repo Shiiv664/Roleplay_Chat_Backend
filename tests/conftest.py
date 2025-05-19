@@ -1,7 +1,7 @@
 """Test fixtures and configuration for pytest."""
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
 from app.models.ai_model import AIModel
@@ -21,7 +21,19 @@ def db_engine():
     Returns:
         Engine: SQLAlchemy engine instance.
     """
-    engine = create_engine("sqlite:///:memory:")
+    # Enable foreign key support in SQLite
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+    )
+
+    # Enable foreign key constraints
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
     Base.metadata.create_all(engine)
     yield engine
     Base.metadata.drop_all(engine)
