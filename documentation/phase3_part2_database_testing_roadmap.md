@@ -151,7 +151,7 @@ Create reusable fixtures and utilities to simplify test implementation:
 
    - [🔄] **Model Test Refactoring - Independent Entities**
      - [✓] Refactor Character model tests to use helper functions
-     - [ ] Refactor Base model tests to use helper functions
+     - [✓] Refactor Base model tests to use helper functions
      - [ ] Refactor UserProfile model tests to use helper functions
      - [ ] Refactor AIModel model tests to use helper functions
      - [ ] Refactor SystemPrompt model tests to use helper functions

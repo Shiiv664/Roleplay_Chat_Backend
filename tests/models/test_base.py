@@ -6,11 +6,17 @@ from sqlalchemy.orm import DeclarativeBase
 
 from app.models.base import Base
 from app.models.character import Character
+from tests.models.helpers import (
+    check_model_columns_existence,
+    check_model_inheritance,
+    check_model_to_dict,
+    force_update_timestamp,
+)
 
 
 def test_base_inheritance():
     """Test that Base inherits from DeclarativeBase."""
-    assert issubclass(Base, DeclarativeBase)
+    check_model_inheritance(Base, DeclarativeBase)
 
 
 def test_base_to_dict(db_session, create_character):
@@ -20,16 +26,19 @@ def test_base_to_dict(db_session, create_character):
     db_session.add(character)
     db_session.commit()
 
-    # Get dictionary representation
-    char_dict = character.to_dict()
+    # Define expected values
+    expected_values = {
+        "id": character.id,
+        "label": "test_character",
+        "name": "Test Character",
+        "description": "A test character description",
+    }
 
-    # Verify the result is a dictionary with expected values
-    assert isinstance(char_dict, dict)
-    assert char_dict["id"] == character.id
-    assert char_dict["label"] == "test_character"
-    assert char_dict["name"] == "Test Character"
-    assert char_dict["description"] == "A test character description"
-    # Timestamps should be present after commit
+    # Test to_dict using helper
+    check_model_to_dict(character, expected_values)
+
+    # Verify timestamps are present (separately since we can't predict their values)
+    char_dict = character.to_dict()
     assert "created_at" in char_dict
     assert "updated_at" in char_dict
 
@@ -60,11 +69,9 @@ def test_base_from_dict():
 
 def test_timestamp_mixin_attributes():
     """Test that TimestampMixin adds expected attributes."""
-    character = Character(label="test_char", name="Test Character")
-
-    # Verify the model has timestamp attributes
-    assert hasattr(character, "created_at")
-    assert hasattr(character, "updated_at")
+    # Check that a model inheriting from TimestampMixin has timestamp columns
+    expected_attributes = ["created_at", "updated_at"]
+    check_model_columns_existence(Character, expected_attributes)
 
 
 def test_timestamp_values_on_save(db_session, create_character):
@@ -90,11 +97,7 @@ def test_timestamp_values_on_save(db_session, create_character):
 
 
 def test_timestamp_updated_on_change(db_session, create_character):
-    """Test that updated_at is updated when the model is changed.
-
-    Note: This test is more conceptual since SQLite's CURRENT_TIMESTAMP in
-    memory database might not change rapidly enough for testing.
-    """
+    """Test that updated_at is updated when the model is changed."""
     # Create and save a character
     character = create_character()
     db_session.add(character)
@@ -103,25 +106,12 @@ def test_timestamp_updated_on_change(db_session, create_character):
     # Store the original timestamps
     created_at = character.created_at
 
-    # Set the updated_at field explicitly instead of relying on
-    # the trigger in SQLite, which may not update in memory
-    import datetime
-
-    from sqlalchemy import text
-
-    # Force the updated_at field to be different for testing
-    new_time = datetime.datetime.now() + datetime.timedelta(hours=1)
-    db_session.execute(
-        text("UPDATE character SET updated_at = :updated_at WHERE id = :id"),
-        {"updated_at": new_time, "id": character.id},
-    )
-    db_session.commit()
-
-    # Refresh the character from the database
-    db_session.refresh(character)
+    # Force the updated_at field to be different using our helper
+    new_updated_at = force_update_timestamp(db_session, character, "updated_at", 1)
 
     # created_at should not change
     assert character.created_at == created_at
 
     # updated_at should be different from created_at
+    assert new_updated_at != created_at
     assert character.updated_at != created_at
