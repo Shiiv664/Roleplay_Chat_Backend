@@ -119,26 +119,39 @@ Create reusable fixtures and utilities to simplify test implementation:
 
    Create helper functions to reduce code duplication and improve test maintainability:
 
-   - [ ] **Basic Model Test Helpers** (tests/models/helpers.py)
-     - [ ] Create `test_model_inheritance(model_class, parent_class)` helper
-     - [ ] Create `test_model_tablename(model_class, expected_tablename)` helper
-     - [ ] Create `test_model_repr(model_instance, expected_attributes)` helper
+   - [✓] **Helper Module Structure**
+     - [✓] Create modular package structure in `tests/models/helpers/`
+     - [✓] Set up proper imports and exports in `__init__.py`
+     - [✓] Organize helpers by functionality (base, column, relationship, fixture)
 
-   - [ ] **Column Validation Helpers**
-     - [ ] Create `check_column_constraints(model_class, column_name, nullable, unique, primary_key, etc.)` helper
-     - [ ] Create `test_required_fields(db_session, model_class, required_fields)` helper
-     - [ ] Create `test_unique_constraint(db_session, model_class, unique_field, value1, value2)` helper
-     - [ ] Create `test_enum_field(db_session, model_class, field_name, enum_class)` helper
+   - [✓] **Basic Model Test Helpers** (tests/models/helpers/base_helpers.py)
+     - [✓] Create `test_model_inheritance(model_class, parent_class)` helper
+     - [✓] Create `test_model_tablename(model_class, expected_tablename)` helper
+     - [✓] Create `test_model_repr(model_instance, expected_attributes)` helper
+     - [✓] Create `test_model_columns_existence(model_class, column_names)` helper
+     - [✓] Create `test_model_to_dict(model_instance, expected_values)` helper
 
-   - [ ] **Relationship Testing Helpers**
-     - [ ] Create `test_relationship(parent_obj, child_obj, parent_attr, child_attr, backref)` helper
-     - [ ] Create `test_foreign_key_constraint(db_session, model_class, fk_field, valid_id, invalid_id)` helper
-     - [ ] Create `test_cascade_delete(db_session, parent_obj, child_obj, relationship_name)` helper
-     - [ ] Create `test_many_to_many(db_session, model1, model2, relationship1, relationship2)` helper
+   - [✓] **Column Validation Helpers** (tests/models/helpers/column_helpers.py)
+     - [✓] Create `check_column_constraints(model_class, column_name, nullable, unique, primary_key, etc.)` helper
+     - [✓] Create `test_required_fields(db_session, model_class, required_fields)` helper
+     - [✓] Create `test_unique_constraint(db_session, model_class, unique_field, value1, value2)` helper
+     - [✓] Create `test_enum_field(db_session, model_class, field_name, enum_class)` helper
 
-   - [ ] **Model Test Refactoring - Independent Entities**
+   - [✓] **Relationship Testing Helpers** (tests/models/helpers/relationship_helpers.py)
+     - [✓] Create `test_relationship(parent_obj, child_obj, parent_attr, child_attr, is_collection, bidirectional)` helper
+     - [✓] Create `test_foreign_key_constraint(db_session, model_factory, fk_field, invalid_id)` helper
+     - [✓] Create `test_cascade_delete(db_session, parent_obj, child_obj, parent_attr, child_attr, child_class)` helper
+     - [✓] Create `test_many_to_many_relationship(db_session, model1, model2, rel_attr1, rel_attr2)` helper
+
+   - [✓] **Fixture Helpers** (tests/models/helpers/fixture_helpers.py)
+     - [✓] Create `create_unique_label(prefix)` utility
+     - [✓] Create `force_update_timestamp(db_session, model_instance, field_name, hours_offset)` utility
+     - [✓] Create `create_model_with_unique_constraint(model_class, db_session, unique_field, **kwargs)` utility
+     - [✓] Create `create_related_models(db_session, parent_factory, child_factory, parent_attr, child_attr)` utility
+
+   - [🔄] **Model Test Refactoring - Independent Entities**
+     - [✓] Refactor Character model tests to use helper functions
      - [ ] Refactor Base model tests to use helper functions
-     - [ ] Refactor Character model tests to use helper functions
      - [ ] Refactor UserProfile model tests to use helper functions
      - [ ] Refactor AIModel model tests to use helper functions
      - [ ] Refactor SystemPrompt model tests to use helper functions

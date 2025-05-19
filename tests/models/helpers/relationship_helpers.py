@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 
-def test_relationship(
+def check_relationship(
     db_session,
     parent_obj,
     child_obj,
@@ -54,7 +54,7 @@ def test_relationship(
         assert child_rel == parent_obj
 
 
-def test_foreign_key_constraint(db_session, model_factory, fk_field, invalid_id):
+def check_foreign_key_constraint(db_session, model_factory, fk_field, invalid_id):
     """Test that a foreign key constraint is enforced.
 
     Args:
@@ -73,7 +73,7 @@ def test_foreign_key_constraint(db_session, model_factory, fk_field, invalid_id)
     db_session.rollback()
 
 
-def test_cascade_delete(
+def check_cascade_delete(
     db_session, parent_obj, child_obj, parent_attr, child_attr, child_class
 ):
     """Test that deleting a parent cascades to its children.
@@ -86,8 +86,6 @@ def test_cascade_delete(
         child_attr: Attribute name on child that relates to parent
         child_class: Class of the child model to use for database queries
     """
-    # Use provided child_class for queries
-
     # Set up relationship
     setattr(child_obj, child_attr, parent_obj)
     db_session.add_all([parent_obj, child_obj])
@@ -107,7 +105,7 @@ def test_cascade_delete(
     ), "Expected child to be deleted via cascade, but it still exists"
 
 
-def test_many_to_many_relationship(db_session, model1, model2, rel_attr1, rel_attr2):
+def check_many_to_many_relationship(db_session, model1, model2, rel_attr1, rel_attr2):
     """Test a many-to-many relationship between two models.
 
     Args:

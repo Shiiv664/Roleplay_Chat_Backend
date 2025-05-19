@@ -36,7 +36,16 @@ def check_column_constraints(
     assert (
         column.nullable == nullable
     ), f"Expected nullable={nullable}, got {column.nullable}"
-    assert column.unique == unique, f"Expected unique={unique}, got {column.unique}"
+
+    # Handle None value for unique property (SQLAlchemy can use None instead of False)
+    if unique:
+        assert column.unique is True, f"Expected unique=True, got {column.unique}"
+    else:
+        assert column.unique in (
+            False,
+            None,
+        ), f"Expected unique=False or None, got {column.unique}"
+
     assert (
         column.primary_key == primary_key
     ), f"Expected primary_key={primary_key}, got {column.primary_key}"
@@ -56,7 +65,7 @@ def check_column_constraints(
             ), f"Expected default={default}, got {column.default.arg}"
 
 
-def test_required_fields(db_session, model_class, create_valid_data, required_fields):
+def check_required_fields(db_session, model_class, create_valid_data, required_fields):
     """Test that required fields cannot be NULL.
 
     Args:
@@ -80,7 +89,7 @@ def test_required_fields(db_session, model_class, create_valid_data, required_fi
         db_session.rollback()
 
 
-def test_unique_constraint(
+def check_unique_constraint(
     db_session, model_class, create_instance_with_unique, unique_field
 ):
     """Test that a unique constraint is enforced.
@@ -113,7 +122,7 @@ def test_unique_constraint(
     db_session.commit()  # Should not raise an error
 
 
-def test_enum_field(db_session, model_class, field_name, enum_class, create_instance):
+def check_enum_field(db_session, model_class, field_name, enum_class, create_instance):
     """Test that an enum field accepts valid values and rejects invalid ones.
 
     Args:

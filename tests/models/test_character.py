@@ -1,42 +1,66 @@
-"""Tests for the Character model."""
+"""Tests for the Character model using helper functions."""
 
 import pytest
+from sqlalchemy import Integer, String, Text
 from sqlalchemy.exc import IntegrityError
 
 from app.models.base import Base, TimestampMixin
 from app.models.character import Character
+from app.models.chat_session import ChatSession
+from tests.models.helpers import (
+    check_cascade_delete,
+    check_column_constraints,
+    check_model_columns_existence,
+    check_model_inheritance,
+    check_model_repr,
+    check_model_tablename,
+    check_relationship,
+    check_unique_constraint,
+)
 
 
 def test_character_inheritance():
     """Test Character model inherits from correct base classes."""
-    assert issubclass(Character, Base)
-    assert issubclass(Character, TimestampMixin)
+    check_model_inheritance(Character, Base)
+    check_model_inheritance(Character, TimestampMixin)
 
 
 def test_character_tablename():
     """Test Character model has the correct table name."""
-    assert Character.__tablename__ == "character"
+    check_model_tablename(Character, "character")
 
 
 def test_character_columns():
     """Test Character model has the expected columns."""
-    # Check primary key
-    assert hasattr(Character, "id")
+    # Test column existence
+    expected_columns = [
+        "id",
+        "label",
+        "name",
+        "avatar_image",
+        "description",
+        "created_at",
+        "updated_at",
+        "chat_sessions",
+    ]
+    check_model_columns_existence(Character, expected_columns)
 
-    # Check required columns
-    assert hasattr(Character, "label")
-    assert hasattr(Character, "name")
+    # Test column constraints
+    check_column_constraints(
+        Character, "id", nullable=False, primary_key=True, column_type=Integer
+    )
 
-    # Check optional columns
-    assert hasattr(Character, "avatar_image")
-    assert hasattr(Character, "description")
+    check_column_constraints(
+        Character, "label", nullable=False, unique=True, column_type=String
+    )
 
-    # Check timestamp columns from mixin
-    assert hasattr(Character, "created_at")
-    assert hasattr(Character, "updated_at")
+    check_column_constraints(Character, "name", nullable=False, column_type=String)
 
-    # Check relationships
-    assert hasattr(Character, "chat_sessions")
+    check_column_constraints(Character, "description", nullable=True, column_type=Text)
+
+    check_column_constraints(
+        Character, "avatar_image", nullable=True, column_type=String
+    )
 
 
 def test_character_initialization(create_character):
@@ -84,19 +108,18 @@ def test_character_required_fields(db_session):
 
 def test_character_unique_constraint(db_session, create_character):
     """Test Character model label uniqueness constraint."""
-    # Create and save first character
-    character1 = create_character(label="unique_test")
-    db_session.add(character1)
-    db_session.commit()
 
-    # Try to create another character with the same label
-    character2 = create_character(label="unique_test", name="Duplicate Label")
-    db_session.add(character2)
+    # Create a function that creates characters with a specific label
+    def create_character_with_label(label_value):
+        return create_character(label=label_value)
 
-    # Should raise IntegrityError due to unique constraint on label
-    with pytest.raises(IntegrityError):
-        db_session.commit()
-    db_session.rollback()
+    # Test the unique constraint on the label field
+    check_unique_constraint(
+        db_session=db_session,
+        model_class=Character,
+        create_instance_with_unique=create_character_with_label,
+        unique_field="label",
+    )
 
 
 def test_character_optional_fields(db_session, create_character):
@@ -114,12 +137,12 @@ def test_character_optional_fields(db_session, create_character):
 def test_character_representation(create_character):
     """Test Character model string representation."""
     character = create_character()
+    character.id = 1  # Set ID manually for testing
 
-    # Test __repr__ method
-    repr_string = repr(character)
-    assert "Character" in repr_string
-    assert "test_character" in repr_string
-    assert "Test Character" in repr_string
+    # Test representation using helper
+    expected_attrs = {"id": 1, "label": "'test_character'", "name": "'Test Character'"}
+
+    check_model_repr(character, expected_attrs)
 
 
 def test_character_relationships(db_session, create_character, create_chat_session):
@@ -129,19 +152,30 @@ def test_character_relationships(db_session, create_character, create_chat_sessi
     db_session.add(character)
     db_session.commit()
 
-    # Create chat sessions associated with the character
-    session1 = create_chat_session(character=character)
-    session2 = create_chat_session(character=character)
-    db_session.add_all([session1, session2])
+    # Create a chat session associated with the character
+    session = create_chat_session(character=character)
+    db_session.add(session)
     db_session.commit()
 
-    # Test relationship fetching
+    # Test relationship using helper
+    check_relationship(
+        db_session=db_session,
+        parent_obj=character,
+        child_obj=session,
+        parent_attr="chat_sessions",
+        child_attr="character",
+        is_collection=True,
+        bidirectional=True,
+    )
+
+    # Create a second session to verify multiple relationships
+    session2 = create_chat_session(character=character)
+    db_session.add(session2)
+    db_session.commit()
+
+    # Verify multiple sessions
     sessions = character.chat_sessions.all()
     assert len(sessions) == 2
-
-    # Verify bidirectional relationship
-    for session in sessions:
-        assert session.character_id == character.id
 
 
 def test_character_cascade_delete(db_session, create_character, create_chat_session):
@@ -155,15 +189,12 @@ def test_character_cascade_delete(db_session, create_character, create_chat_sess
     db_session.add(session1)
     db_session.commit()
 
-    # Store the session ID for verification
-    session_id = session1.id
-
-    # Delete the character
-    db_session.delete(character)
-    db_session.commit()
-
-    # Verify the session was also deleted (cascade delete)
-    from app.models.chat_session import ChatSession
-
-    deleted_session = db_session.query(ChatSession).filter_by(id=session_id).first()
-    assert deleted_session is None
+    # Test cascade delete using helper
+    check_cascade_delete(
+        db_session=db_session,
+        parent_obj=character,
+        child_obj=session1,
+        parent_attr="chat_sessions",
+        child_attr="character",
+        child_class=ChatSession,
+    )

@@ -5,7 +5,7 @@ like inheritance, table names, and string representation.
 """
 
 
-def test_model_inheritance(model_class, parent_class):
+def check_model_inheritance(model_class, parent_class):
     """Test that a model inherits from the correct parent class.
 
     Args:
@@ -15,7 +15,7 @@ def test_model_inheritance(model_class, parent_class):
     assert issubclass(model_class, parent_class)
 
 
-def test_model_tablename(model_class, expected_tablename):
+def check_model_tablename(model_class, expected_tablename):
     """Test that a model has the correct table name.
 
     Args:
@@ -25,7 +25,7 @@ def test_model_tablename(model_class, expected_tablename):
     assert model_class.__tablename__ == expected_tablename
 
 
-def test_model_repr(model_instance, expected_attributes):
+def check_model_repr(model_instance, expected_attributes):
     """Test the string representation of a model instance.
 
     Args:
@@ -43,7 +43,7 @@ def test_model_repr(model_instance, expected_attributes):
         ), f"Expected '{expected_text}' in repr, got '{repr_string}'"
 
 
-def test_model_columns_existence(model_class, column_names):
+def check_model_columns_existence(model_class, column_names):
     """Test that a model has all the expected columns.
 
     Args:
@@ -56,7 +56,7 @@ def test_model_columns_existence(model_class, column_names):
         ), f"Column '{column_name}' not found in {model_class.__name__}"
 
 
-def test_model_to_dict(model_instance, expected_values):
+def check_model_to_dict(model_instance, expected_values):
     """Test the to_dict method of a model instance.
 
     Args:
