@@ -57,10 +57,10 @@ Implement models in this dependency order:
    - [✓] Configure metadata
 
 2. **Independent Entity Models**
-   - [ ] Character model (models/character.py)
-   - [ ] UserProfile model (models/user_profile.py)
-   - [ ] AIModel model (models/ai_model.py)
-   - [ ] SystemPrompt model (models/system_prompt.py)
+   - [✓] Character model (models/character.py)
+   - [✓] UserProfile model (models/user_profile.py)
+   - [✓] AIModel model (models/ai_model.py)
+   - [✓] SystemPrompt model (models/system_prompt.py)
 
 3. **Dependent Entity Models**
    - [ ] ChatSession model (models/chat_session.py) - references characters, profiles, models, prompts
