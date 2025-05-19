@@ -1,39 +1,81 @@
-"""Tests for the Message model."""
+"""Tests for the Message model using helper functions."""
 
 import datetime
+
+from sqlalchemy import Integer, Text, DateTime, Enum
 
 import pytest
 from sqlalchemy.exc import IntegrityError
 
 from app.models.base import Base
 from app.models.message import Message, MessageRole
+from tests.models.helpers import (
+    check_model_inheritance,
+    check_model_tablename,
+    check_model_columns_existence,
+    check_model_repr,
+    check_column_constraints,
+    check_cascade_delete,
+    check_relationship,
+    check_foreign_key_constraint,
+    check_enum_values,
+    check_enum_field,
+)
 
 
 def test_message_inheritance():
     """Test Message model inherits from correct base class."""
-    assert issubclass(Message, Base)
+    check_model_inheritance(Message, Base)
 
 
 def test_message_tablename():
     """Test Message model has the correct table name."""
-    assert Message.__tablename__ == "message"
+    check_model_tablename(Message, "message")
 
 
 def test_message_columns():
     """Test Message model has the expected columns."""
-    # Check primary key
-    assert hasattr(Message, "id")
+    # Test column existence
+    expected_columns = [
+        "id",
+        "chat_session_id",
+        "role",
+        "content",
+        "timestamp",
+        "chat_session",
+    ]
+    check_model_columns_existence(Message, expected_columns)
+    
+    # Test column constraints
+    check_column_constraints(
+        Message, "id", nullable=False, primary_key=True, column_type=Integer
+    )
+    
+    check_column_constraints(
+        Message, "chat_session_id", nullable=False, column_type=Integer
+    )
+    
+    check_column_constraints(
+        Message, "role", nullable=False, column_type=Enum
+    )
+    
+    check_column_constraints(
+        Message, "content", nullable=False, column_type=Text
+    )
+    
+    check_column_constraints(
+        Message, "timestamp", nullable=False, column_type=DateTime
+    )
 
-    # Check foreign key fields
-    assert hasattr(Message, "chat_session_id")
 
-    # Check content fields
-    assert hasattr(Message, "role")
-    assert hasattr(Message, "content")
-    assert hasattr(Message, "timestamp")
-
-    # Check relationships
-    assert hasattr(Message, "chat_session")
+def test_message_role_enum():
+    """Test MessageRole enum has expected values."""
+    # Test the enum values
+    expected_values = {
+        "USER": "user",
+        "ASSISTANT": "assistant",
+    }
+    check_enum_values(MessageRole, expected_values)
 
 
 def test_message_initialization(db_session, create_chat_session):
@@ -121,19 +163,24 @@ def test_message_foreign_key_constraints(db_session, create_chat_session):
     chat_session = create_chat_session()
     db_session.add(chat_session)
     db_session.commit()
-
-    # Test invalid foreign key for chat_session_id
-    invalid_session_id = 999999  # Non-existent ID
-    message_invalid_session = Message(
-        chat_session_id=invalid_session_id,
-        role=MessageRole.USER,
-        content="Test message with invalid session ID",
+    
+    # Create a valid Message factory function
+    def create_valid_message(**kwargs):
+        valid_fields = {
+            "chat_session_id": chat_session.id,
+            "role": MessageRole.USER,
+            "content": "Test message",
+        }
+        valid_fields.update(kwargs)
+        return Message(**valid_fields)
+    
+    # Test chat_session_id foreign key constraint
+    check_foreign_key_constraint(
+        db_session=db_session,
+        model_factory=create_valid_message,
+        fk_field="chat_session_id",
+        invalid_id=999999
     )
-    db_session.add(message_invalid_session)
-
-    with pytest.raises(IntegrityError):
-        db_session.commit()
-    db_session.rollback()
 
 
 def test_message_role_enum_values(db_session, create_chat_session):
@@ -142,26 +189,23 @@ def test_message_role_enum_values(db_session, create_chat_session):
     chat_session = create_chat_session()
     db_session.add(chat_session)
     db_session.commit()
-
-    # Create messages with valid roles
-    message_user = Message(
-        chat_session_id=chat_session.id, role=MessageRole.USER, content="User message"
+    
+    # Create a message creation function for the enum test
+    def create_message_with_role(role):
+        return Message(
+            chat_session_id=chat_session.id,
+            role=role,
+            content=f"Message with role {role.value}"
+        )
+    
+    # Test all enum values
+    check_enum_field(
+        db_session=db_session,
+        model_class=Message,
+        field_name="role",
+        enum_class=MessageRole,
+        create_instance=create_message_with_role
     )
-    message_assistant = Message(
-        chat_session_id=chat_session.id,
-        role=MessageRole.ASSISTANT,
-        content="Assistant message",
-    )
-
-    # Add to session and commit
-    db_session.add_all([message_user, message_assistant])
-    db_session.commit()
-
-    # Verify roles are stored correctly
-    assert message_user.role == MessageRole.USER
-    assert message_user.role.value == "user"
-    assert message_assistant.role == MessageRole.ASSISTANT
-    assert message_assistant.role.value == "assistant"
 
 
 def test_message_relationship(db_session, create_chat_session):
@@ -180,12 +224,16 @@ def test_message_relationship(db_session, create_chat_session):
     db_session.add(message)
     db_session.commit()
 
-    # Test relationship with chat_session
-    assert message.chat_session_id == chat_session.id
-    assert message.chat_session == chat_session
-
-    # Test bidirectional relationship
-    assert message in chat_session.messages
+    # Test relationship using helper
+    check_relationship(
+        db_session=db_session,
+        parent_obj=chat_session,
+        child_obj=message,
+        parent_attr="messages",
+        child_attr="chat_session",
+        is_collection=True,
+        bidirectional=True
+    )
 
 
 def test_message_multiple_per_session(db_session, create_chat_session):
@@ -229,30 +277,22 @@ def test_message_cascade_delete_with_chat_session(db_session, create_chat_sessio
     db_session.add(chat_session)
     db_session.commit()
 
-    # Create messages
-    message1 = Message(
-        chat_session_id=chat_session.id, role=MessageRole.USER, content="First message"
+    # Create message
+    message = Message(
+        chat_session_id=chat_session.id, role=MessageRole.USER, content="Test cascade delete"
     )
-    message2 = Message(
-        chat_session_id=chat_session.id,
-        role=MessageRole.ASSISTANT,
-        content="Second message",
-    )
-
-    db_session.add_all([message1, message2])
+    db_session.add(message)
     db_session.commit()
 
-    # Store message IDs for verification
-    message_ids = [message1.id, message2.id]
-
-    # Delete the chat session
-    db_session.delete(chat_session)
-    db_session.commit()
-
-    # Verify messages were deleted (cascade delete)
-    for message_id in message_ids:
-        deleted_message = db_session.query(Message).filter_by(id=message_id).first()
-        assert deleted_message is None
+    # Test cascade delete using helper
+    check_cascade_delete(
+        db_session=db_session,
+        parent_obj=chat_session,
+        child_obj=message,
+        parent_attr="messages",
+        child_attr="chat_session",
+        child_class=Message
+    )
 
 
 def test_message_representation(db_session, create_chat_session):
@@ -271,9 +311,11 @@ def test_message_representation(db_session, create_chat_session):
     db_session.add(message)
     db_session.commit()
 
-    # Test __repr__ method
-    repr_string = repr(message)
-    assert "Message" in repr_string
-    assert f"id={message.id}" in repr_string
-    assert f"chat_session_id={chat_session.id}" in repr_string
-    assert "user" in repr_string  # Check that role.value is included
+    # Test representation using helper
+    expected_attrs = {
+        "id": message.id,
+        "chat_session_id": chat_session.id,
+        "role": "user"  # The enum's value
+    }
+    
+    check_model_repr(message, expected_attrs)

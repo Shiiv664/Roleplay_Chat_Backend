@@ -16,6 +16,7 @@ __all__ = [
     "check_required_fields",
     "check_unique_constraint",
     "check_enum_field",
+    "check_enum_values",
     # From relationship_helpers
     "check_relationship",
     "check_foreign_key_constraint",
@@ -39,6 +40,7 @@ from tests.models.helpers.base_helpers import (  # noqa: F401
 from tests.models.helpers.column_helpers import (  # noqa: F401
     check_column_constraints,
     check_enum_field,
+    check_enum_values,
     check_required_fields,
     check_unique_constraint,
 )

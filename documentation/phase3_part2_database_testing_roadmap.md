@@ -158,7 +158,7 @@ Create reusable fixtures and utilities to simplify test implementation:
 
    - [🔄] **Model Test Refactoring - Dependent Entities**
      - [✓] Refactor ChatSession model tests to use helper functions
-     - [ ] Refactor Message model tests to use helper functions
+     - [✓] Refactor Message model tests to use helper functions
      - [ ] Refactor ApplicationSettings model tests to use helper functions
 
    - [ ] **Add Common Test Fixtures**
