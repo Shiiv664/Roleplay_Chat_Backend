@@ -1,40 +1,66 @@
-"""Tests for the AIModel model."""
+"""Tests for the AIModel model using helper functions."""
 
 import datetime
+
+from sqlalchemy import Integer, String, Text, DateTime
 
 import pytest
 from sqlalchemy.exc import IntegrityError
 
 from app.models.ai_model import AIModel
 from app.models.base import Base
+from tests.models.helpers import (
+    check_model_inheritance,
+    check_model_tablename,
+    check_model_columns_existence,
+    check_model_repr,
+    check_column_constraints,
+    check_unique_constraint,
+    check_relationship,
+)
 
 
 def test_ai_model_inheritance():
     """Test AIModel model inherits from correct base class."""
-    assert issubclass(AIModel, Base)
+    check_model_inheritance(AIModel, Base)
     # AIModel doesn't use TimestampMixin but has its own created_at
 
 
 def test_ai_model_tablename():
     """Test AIModel model has the correct table name."""
-    assert AIModel.__tablename__ == "aiModel"
+    check_model_tablename(AIModel, "aiModel")
 
 
 def test_ai_model_columns():
     """Test AIModel model has the expected columns."""
-    # Check primary key
-    assert hasattr(AIModel, "id")
-
-    # Check required columns
-    assert hasattr(AIModel, "label")
-
-    # Check optional columns
-    assert hasattr(AIModel, "description")
-    assert hasattr(AIModel, "created_at")
-
-    # Check relationships
-    assert hasattr(AIModel, "chat_sessions")
-    assert hasattr(AIModel, "default_in_settings")
+    # Test column existence
+    expected_columns = [
+        "id",
+        "label",
+        "description",
+        "created_at",
+        "chat_sessions",
+        "default_in_settings",
+    ]
+    check_model_columns_existence(AIModel, expected_columns)
+    
+    # Test column constraints
+    check_column_constraints(
+        AIModel, "id", nullable=False, primary_key=True, column_type=Integer
+    )
+    
+    check_column_constraints(
+        AIModel, "label", nullable=False, unique=True, column_type=String
+    )
+    
+    check_column_constraints(
+        AIModel, "description", nullable=True, column_type=Text
+    )
+    
+    # Check created_at with default
+    check_column_constraints(
+        AIModel, "created_at", nullable=False, column_type=DateTime
+    )
 
 
 def test_ai_model_initialization(create_ai_model):
@@ -69,19 +95,17 @@ def test_ai_model_required_fields(db_session):
 
 def test_ai_model_unique_constraint(db_session, create_ai_model):
     """Test AIModel model label uniqueness constraint."""
-    # Create and save first model
-    model1 = create_ai_model(label="unique_test")
-    db_session.add(model1)
-    db_session.commit()
-
-    # Try to create another model with the same label
-    model2 = create_ai_model(label="unique_test")
-    db_session.add(model2)
-
-    # Should raise IntegrityError due to unique constraint on label
-    with pytest.raises(IntegrityError):
-        db_session.commit()
-    db_session.rollback()
+    # Create a function that creates models with a specific label
+    def create_model_with_label(label_value):
+        return create_ai_model(label=label_value)
+    
+    # Test the unique constraint on the label field
+    check_unique_constraint(
+        db_session=db_session,
+        model_class=AIModel,
+        create_instance_with_unique=create_model_with_label,
+        unique_field="label"
+    )
 
 
 def test_ai_model_optional_fields(db_session):
@@ -116,11 +140,15 @@ def test_ai_model_created_timestamp(db_session, create_ai_model):
 def test_ai_model_representation(create_ai_model):
     """Test AIModel model string representation."""
     ai_model = create_ai_model()
+    ai_model.id = 1  # Set ID manually for testing
 
-    # Test __repr__ method
-    repr_string = repr(ai_model)
-    assert "AIModel" in repr_string
-    assert "test_model" in repr_string
+    # Test representation using helper
+    expected_attrs = {
+        "id": 1,
+        "label": "'test_model'"
+    }
+    
+    check_model_repr(ai_model, expected_attrs)
 
 
 def test_ai_model_relationships(
@@ -132,22 +160,36 @@ def test_ai_model_relationships(
     db_session.add(ai_model)
     db_session.commit()
 
-    # Create characters with unique labels for each chat session
-    character1 = create_character(label=f"char_for_ai_model_1_{ai_model.id}")
+    # Create a character for the chat session
+    character = create_character(label=f"char_for_ai_model_{ai_model.id}")
+    db_session.add(character)
+    db_session.commit()
+
+    # Create a chat session associated with the AI model
+    session = create_chat_session(ai_model=ai_model, character=character)
+    db_session.add(session)
+    db_session.commit()
+
+    # Test relationship using helper
+    check_relationship(
+        db_session=db_session,
+        parent_obj=ai_model,
+        child_obj=session,
+        parent_attr="chat_sessions",
+        child_attr="ai_model",
+        is_collection=True,
+        bidirectional=True
+    )
+    
+    # Create a second session to verify multiple relationships
     character2 = create_character(label=f"char_for_ai_model_2_{ai_model.id}")
-    db_session.add_all([character1, character2])
+    db_session.add(character2)
     db_session.commit()
-
-    # Create chat sessions associated with the model and unique characters
-    session1 = create_chat_session(ai_model=ai_model, character=character1)
+    
     session2 = create_chat_session(ai_model=ai_model, character=character2)
-    db_session.add_all([session1, session2])
+    db_session.add(session2)
     db_session.commit()
-
-    # Test relationship fetching
+    
+    # Verify multiple sessions
     sessions = ai_model.chat_sessions.all()
     assert len(sessions) == 2
-
-    # Verify bidirectional relationship
-    for session in sessions:
-        assert session.ai_model_id == ai_model.id
