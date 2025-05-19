@@ -38,8 +38,8 @@ This roadmap provides implementation guidance for the database models and initia
 
 2. **Implement Database Initialization Script**
    - [✓] Create script to initialize database if not exists
-   - [ ] Set up initial migration
-   - [ ] Add database version tracking
+   - [✓] Set up initial migration
+   - [✓] Add database version tracking
    - [ ] Create script for generating sample data
 
 

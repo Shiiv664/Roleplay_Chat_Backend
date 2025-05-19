@@ -80,6 +80,5 @@ instance/
 # mypy
 .mypy_cache/
 
-# Alembic
-alembic/versions/*.py
-!alembic/versions/__init__.py
+# Alembic - we intentionally don't ignore version scripts 
+# as they should be tracked in version control
