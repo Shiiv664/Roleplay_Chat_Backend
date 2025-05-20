@@ -1,8 +1,22 @@
 """Main application entry point."""
 
-from flask import Flask
+import logging
+
+from flask import Flask, jsonify, request
+from flask_cors import CORS
 
 from app.config import get_config
+from app.utils.exceptions import (
+    BusinessRuleError,
+    DatabaseError,
+    ResourceNotFoundError,
+    ValidationError,
+)
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 
 
 def create_app() -> Flask:
@@ -14,16 +28,100 @@ def create_app() -> Flask:
     app = Flask(__name__)
     app.config.from_object(get_config())
 
-    # Register blueprints, initialize extensions, etc. will be added later
+    # Initialize CORS
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
 
+    # Add is_debug property to request context
+    @app.before_request
+    def before_request():
+        request.is_debug = app.debug
+
+    # Initialize database
+    from app.utils.db import init_db
+
+    init_db(app)
+
+    # Initialize API
+    from app.api import init_app as init_api
+
+    init_api(app)
+
+    # Global error handlers
+    @app.errorhandler(ValidationError)
+    def handle_validation_error(e):
+        response = {
+            "success": False,
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": str(e),
+                "details": getattr(e, "details", None),
+            },
+        }
+        return jsonify(response), 400
+
+    @app.errorhandler(ResourceNotFoundError)
+    def handle_not_found_error(e):
+        response = {
+            "success": False,
+            "error": {
+                "code": "RESOURCE_NOT_FOUND",
+                "message": str(e),
+                "details": getattr(e, "details", None),
+            },
+        }
+        return jsonify(response), 404
+
+    @app.errorhandler(BusinessRuleError)
+    def handle_business_rule_error(e):
+        response = {
+            "success": False,
+            "error": {
+                "code": "BUSINESS_RULE_ERROR",
+                "message": str(e),
+                "details": getattr(e, "details", None),
+            },
+        }
+        return jsonify(response), 400
+
+    @app.errorhandler(DatabaseError)
+    def handle_database_error(e):
+        response = {
+            "success": False,
+            "error": {
+                "code": "DATABASE_ERROR",
+                "message": "A database error occurred",
+                "details": str(e) if app.debug else None,
+            },
+        }
+        return jsonify(response), 500
+
+    @app.errorhandler(Exception)
+    def handle_unexpected_error(e):
+        response = {
+            "success": False,
+            "error": {
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": "An unexpected error occurred",
+                "details": str(e) if app.debug else None,
+            },
+        }
+        return jsonify(response), 500
+
+    # Root route
     @app.route("/")
     def index():
         """Index route for the application."""
-        return "LLM Roleplay Chat Client API"
+        return jsonify(
+            {
+                "app": "LLM Roleplay Chat Client API",
+                "version": "1.0.0",
+                "api_docs": "/api/v1/docs",
+            }
+        )
 
     return app
 
 
 if __name__ == "__main__":
     app = create_app()
-    app.run(debug=app.config.get("DEBUG", False))
+    app.run(host="0.0.0.0", port=5000, debug=app.config.get("DEBUG", False))
