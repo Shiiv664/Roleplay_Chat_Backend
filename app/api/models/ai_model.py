@@ -23,6 +23,16 @@ ai_model_model = Model(
     },
 )
 
+# Short version for nested references
+ai_model_short_model = Model(
+    "AIModelShort",
+    {
+        "id": fields.Integer(readOnly=True, description="AI Model ID"),
+        "label": fields.String(description="Unique AI model identifier"),
+        "description": fields.String(description="AI model description"),
+    },
+)
+
 ai_model_create_model = Model(
     "AIModelCreate",
     {

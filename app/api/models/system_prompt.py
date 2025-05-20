@@ -23,6 +23,16 @@ system_prompt_model = Model(
     },
 )
 
+# Short version for nested references
+system_prompt_short_model = Model(
+    "SystemPromptShort",
+    {
+        "id": fields.Integer(readOnly=True, description="System Prompt ID"),
+        "label": fields.String(description="Unique system prompt identifier"),
+        "content": fields.String(description="System prompt content"),
+    },
+)
+
 system_prompt_create_model = Model(
     "SystemPromptCreate",
     {

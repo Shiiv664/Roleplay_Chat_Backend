@@ -29,6 +29,17 @@ user_profile_model = Model(
     },
 )
 
+# Short version for nested references
+user_profile_short_model = Model(
+    "UserProfileShort",
+    {
+        "id": fields.Integer(readOnly=True, description="User Profile ID"),
+        "label": fields.String(description="Unique user profile identifier"),
+        "name": fields.String(description="User profile name"),
+        "avatar_image": fields.String(description="User profile avatar image path"),
+    },
+)
+
 user_profile_create_model = Model(
     "UserProfileCreate",
     {
