@@ -1,5 +1,7 @@
 """API namespaces for resource endpoints."""
 
+from datetime import datetime
+
 from flask import request
 
 from app.utils.exceptions import (
@@ -8,6 +10,31 @@ from app.utils.exceptions import (
     ResourceNotFoundError,
     ValidationError,
 )
+
+
+def model_to_dict(obj):
+    """Convert SQLAlchemy model instance to a dictionary.
+
+    Args:
+        obj: SQLAlchemy model instance
+
+    Returns:
+        dict: Dictionary representation of the model
+    """
+    if isinstance(obj, list):
+        return [model_to_dict(item) for item in obj]
+
+    # Use the model's built-in to_dict method if available
+    if hasattr(obj, "to_dict"):
+        result = obj.to_dict()
+        # Convert datetime objects to ISO format strings for JSON serialization
+        for key, value in result.items():
+            if isinstance(value, datetime):
+                result[key] = value.isoformat()
+        return result
+
+    # Fallback for non-model objects
+    return obj
 
 
 def create_response(data=None, meta=None, success=True, error=None):
@@ -22,6 +49,10 @@ def create_response(data=None, meta=None, success=True, error=None):
     Returns:
         dict: Formatted response
     """
+    # Convert SQLAlchemy models to dictionaries
+    if data is not None:
+        data = model_to_dict(data)
+
     response = {"success": success, "data": data, "meta": meta or {}, "error": error}
     return response
 
