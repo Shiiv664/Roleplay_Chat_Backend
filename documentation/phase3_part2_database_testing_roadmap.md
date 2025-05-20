@@ -161,11 +161,6 @@ Create reusable fixtures and utilities to simplify test implementation:
      - [✓] Refactor Message model tests to use helper functions
      - [✓] Refactor ApplicationSettings model tests to use helper functions
 
-   - [ ] **Add Common Test Fixtures**
-     - [ ] Create fixtures for common test patterns
-     - [ ] Create parameterized tests for similar models
-     - [ ] Create reusable test cases that work across model types
-
 ## Test Coverage Goals
 
 Aim to achieve the following test coverage targets as specified in the testing strategy:
@@ -183,9 +178,7 @@ Set up commands and workflows for running and verifying tests:
    - [✓] Set up test discovery
 
 2. **CI Integration**
-   - [ ] Configure test running in CI workflows
-   - [ ] Set up coverage threshold checks
-   - [ ] Enforce test passing for merges
+   We do not use CI Integration for now.
 
 ## Helper Function Examples
 

@@ -32,6 +32,7 @@
 - Implement basic service layer functionality
   - Write unit tests for services
 - Develop core API endpoints for CRUD operations (based on API endpoints in technical_architecture.md)
+  - Implement automatic API documentation using Flask-RESTX
   - Write unit tests for API endpoints
   - Configure app settings (following configuration_deployment_strategy.md)
 - Set up error handling and logging system (follow principles in error_handling_strategy.md)

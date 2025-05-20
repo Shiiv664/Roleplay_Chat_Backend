@@ -70,7 +70,7 @@ The service layer will contain business logic, orchestrating operations between 
 
 ### API Layer
 
-The API layer will expose HTTP endpoints using Flask, providing a RESTful interface for the frontend.
+The API layer will expose HTTP endpoints using Flask and Flask-RESTX, providing a RESTful interface for the frontend with automatic API documentation.
 
 #### Structure:
 - `api/`
@@ -83,6 +83,8 @@ The API layer will expose HTTP endpoints using Flask, providing a RESTful interf
     - `settings_routes.py` - Application settings endpoints
   - `middleware/` - Request processing middleware (future expansion)
   - `utils/` - API utility functions
+  - `models/` - Flask-RESTX models for request/response validation
+  - `namespaces/` - Flask-RESTX namespace definitions
 
 #### Key Responsibilities:
 - HTTP request handling
@@ -90,6 +92,7 @@ The API layer will expose HTTP endpoints using Flask, providing a RESTful interf
 - Response formatting
 - Error handling and status codes
 - Authentication and authorization (future expansion)
+- API documentation via Swagger UI
 
 ## Frontend Architecture
 
@@ -230,7 +233,7 @@ The application will use a simple, modular state management approach:
     ├── global_roadmap.md       # Project roadmap
     ├── database_schema.sql     # Database schema
     ├── technical_architecture.md # This document
-    └── api_endpoints.md        # API documentation
+    └── api_documentation.md    # API documentation reference (supplementary to auto-generated docs)
 ```
 
 ## SQLAlchemy Implementation Details
