@@ -255,6 +255,7 @@ class CharacterRepository(BaseRepository[Character]):
 1. **Implement UserProfileRepository**
    - [✓] Create `user_profile_repository.py`
    - [✓] Implement entity-specific query methods
+   - [✓] Implement get_default_profile method
 
 ```python
 # app/repositories/user_profile_repository.py
@@ -296,6 +297,7 @@ class UserProfileRepository(BaseRepository[UserProfile]):
 1. **Implement AIModelRepository**
    - [✓] Create `ai_model_repository.py`
    - [✓] Implement entity-specific query methods
+   - [✓] Implement get_default_model method
 
 ```python
 # app/repositories/ai_model_repository.py
@@ -337,6 +339,7 @@ class AIModelRepository(BaseRepository[AIModel]):
 1. **Implement SystemPromptRepository**
    - [✓] Create `system_prompt_repository.py`
    - [✓] Implement entity-specific query methods
+   - [✓] Implement get_default_prompt method
 
 ```python
 # app/repositories/system_prompt_repository.py

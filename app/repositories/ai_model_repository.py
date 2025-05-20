@@ -69,29 +69,25 @@ class AIModelRepository(BaseRepository[AIModel]):
             )
 
     def get_default_model(self) -> Optional[AIModel]:
-        """Get the default AI model if it exists.
-
-        This method queries the application_settings to find the default AI model.
+        """Get the default AI model from application settings if set.
 
         Returns:
-            AIModel or None: The default AI model if found, None otherwise
+            AIModel or None: The default AI model if set, None otherwise
 
         Raises:
             DatabaseError: If a database error occurs
         """
         try:
-            # Join with ApplicationSettings to get the default AI model
+            # Get application settings
             from app.models.application_settings import ApplicationSettings
 
-            model = (
-                self.session.query(AIModel)
-                .join(
-                    ApplicationSettings,
-                    ApplicationSettings.default_ai_model_id == AIModel.id,
+            settings = self.session.query(ApplicationSettings).first()
+            if settings and settings.default_ai_model_id:
+                return (
+                    self.session.query(AIModel)
+                    .filter(AIModel.id == settings.default_ai_model_id)
+                    .first()
                 )
-                .first()
-            )
-
-            return model
+            return None
         except SQLAlchemyError as e:
             self._handle_db_exception(e, "Error retrieving default AI model")
