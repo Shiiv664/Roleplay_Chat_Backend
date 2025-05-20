@@ -27,8 +27,7 @@ def init_db(app: Flask) -> None:
     # Import models module to ensure models are registered
     import app.models  # noqa
 
-    # Add teardown to ensure sessions are cleaned up
-    app.teardown_appcontext(lambda _: None)  # Just a placeholder for now
+    # No need for teardown at this point as we're using context managers
 
 
 @contextmanager
