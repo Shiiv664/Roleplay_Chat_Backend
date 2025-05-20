@@ -62,6 +62,25 @@ A roleplay chat client application that allows users to have conversations with 
    poetry run pre-commit install
    ```
 
+6. Run the server:
+   ```bash
+   # Method 1: Using Python directly
+   poetry run python app.py
+
+   # Method 2: Using Flask CLI
+   export FLASK_APP=app.py  # On Windows: set FLASK_APP=app.py
+   export FLASK_ENV=development  # On Windows: set FLASK_ENV=development
+   poetry run flask run
+
+   # Method 3: Using Flask CLI with host/port options
+   poetry run flask run --host=0.0.0.0 --port=8000
+   ```
+
+   The server will be available at:
+   - Default URL: http://127.0.0.1:5000/ (Method 2)
+   - Custom URL: http://127.0.0.1:8000/ (Method 3 example)
+   - Network accessible: http://0.0.0.0:8000/ (Method 3 example)
+
 ### Development Workflow
 
 1. Run migrations:
