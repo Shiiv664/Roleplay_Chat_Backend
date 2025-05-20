@@ -156,10 +156,10 @@ Create reusable fixtures and utilities to simplify test implementation:
      - [✓] Refactor AIModel model tests to use helper functions
      - [✓] Refactor SystemPrompt model tests to use helper functions
 
-   - [🔄] **Model Test Refactoring - Dependent Entities**
+   - [✓] **Model Test Refactoring - Dependent Entities**
      - [✓] Refactor ChatSession model tests to use helper functions
      - [✓] Refactor Message model tests to use helper functions
-     - [ ] Refactor ApplicationSettings model tests to use helper functions
+     - [✓] Refactor ApplicationSettings model tests to use helper functions
 
    - [ ] **Add Common Test Fixtures**
      - [ ] Create fixtures for common test patterns
