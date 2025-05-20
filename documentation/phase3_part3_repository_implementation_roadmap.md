@@ -598,11 +598,11 @@ class ApplicationSettingsRepository(BaseRepository[ApplicationSettings]):
 
 ## Repository Registry
 
-Implement a registry for dependency injection and ease of use.
+**[UNWANTED FOR NOW]** Implement a registry for dependency injection and ease of use.
 
 1. **Create RepositoryRegistry**
-   - [ ] Create `repository_registry.py`
-   - [ ] Implement registry pattern
+   - [❌] Create `repository_registry.py` (Unwanted for now)
+   - [❌] Implement registry pattern (Unwanted for now)
 
 ```python
 # app/repositories/repository_registry.py
@@ -991,7 +991,7 @@ class TestTransactionManagement:
 ### 4. Performance Testing for Repositories
 
 1. **Create Performance Tests**
-We won't do this for now.
+   - [❌] **[UNWANTED FOR NOW]** Performance testing is not required at this stage.
 
 ## Performance Optimization
 
@@ -1080,15 +1080,15 @@ Follow this checklist to ensure comprehensive repository implementation:
    - [✓] ApplicationSettings repository
 
 3. **Repository Registry**
-   - [ ] Implement registry pattern
-   - [ ] Add lazy initialization
+   - [❌] Implement registry pattern (Unwanted for now)
+   - [❌] Add lazy initialization (Unwanted for now)
 
 4. **Testing**
    - [✓] Unit tests for base repository
    - [✓] Unit tests for entity-specific repositories (Character, UserProfile, AIModel, SystemPrompt)
    - [✓] Unit tests for ChatSessionRepository, MessageRepository, and ApplicationSettingsRepository
    - [✓] Transaction management tests
-   - [ ] Performance tests
+   - [❌] Performance tests (Unwanted for now)
 
 5. **Performance Optimization**
    We will not do this for now.
