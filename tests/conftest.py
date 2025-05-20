@@ -300,3 +300,40 @@ def create_application_settings(
         )
 
     return _create_application_settings
+
+
+@pytest.fixture
+def app():
+    """Create a Flask application for testing.
+
+    Returns:
+        Flask: Flask application configured for testing.
+    """
+    # Create a Flask app manually for testing
+    from flask import Flask
+
+    from app.api import api_bp
+
+    app = Flask(__name__)
+    app.config["TESTING"] = True
+    app.config["SERVER_NAME"] = "localhost.localdomain"
+
+    # Register the API blueprint
+    app.register_blueprint(api_bp)
+
+    return app
+
+
+@pytest.fixture
+def client(app):
+    """Create a Flask test client.
+
+    Args:
+        app: Flask application fixture.
+
+    Returns:
+        FlaskClient: Flask test client for making requests.
+    """
+    with app.test_client() as client:
+        with app.app_context():
+            yield client
