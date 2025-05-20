@@ -253,8 +253,8 @@ class CharacterRepository(BaseRepository[Character]):
 ### 2. UserProfile Repository
 
 1. **Implement UserProfileRepository**
-   - [ ] Create `user_profile_repository.py`
-   - [ ] Implement entity-specific query methods
+   - [✓] Create `user_profile_repository.py`
+   - [✓] Implement entity-specific query methods
 
 ```python
 # app/repositories/user_profile_repository.py
@@ -294,8 +294,8 @@ class UserProfileRepository(BaseRepository[UserProfile]):
 ### 3. AIModel Repository
 
 1. **Implement AIModelRepository**
-   - [ ] Create `ai_model_repository.py`
-   - [ ] Implement entity-specific query methods
+   - [✓] Create `ai_model_repository.py`
+   - [✓] Implement entity-specific query methods
 
 ```python
 # app/repositories/ai_model_repository.py
@@ -335,8 +335,8 @@ class AIModelRepository(BaseRepository[AIModel]):
 ### 4. SystemPrompt Repository
 
 1. **Implement SystemPromptRepository**
-   - [ ] Create `system_prompt_repository.py`
-   - [ ] Implement entity-specific query methods
+   - [✓] Create `system_prompt_repository.py`
+   - [✓] Implement entity-specific query methods
 
 ```python
 # app/repositories/system_prompt_repository.py
@@ -376,9 +376,9 @@ class SystemPromptRepository(BaseRepository[SystemPrompt]):
 ### 5. ChatSession Repository
 
 1. **Implement ChatSessionRepository**
-   - [ ] Create `chat_session_repository.py`
-   - [ ] Implement entity-specific query methods
-   - [ ] Add relationship-based operations
+   - [✓] Create `chat_session_repository.py`
+   - [✓] Implement entity-specific query methods
+   - [✓] Add relationship-based operations
 
 ```python
 # app/repositories/chat_session_repository.py
@@ -462,9 +462,9 @@ class ChatSessionRepository(BaseRepository[ChatSession]):
 ### 6. Message Repository
 
 1. **Implement MessageRepository**
-   - [ ] Create `message_repository.py`
-   - [ ] Implement entity-specific query methods with performance optimizations
-   - [ ] Add pagination support
+   - [✓] Create `message_repository.py`
+   - [✓] Implement entity-specific query methods with performance optimizations
+   - [✓] Add pagination support
 
 ```python
 # app/repositories/message_repository.py
@@ -547,9 +547,9 @@ class MessageRepository(BaseRepository[Message]):
 ### 7. ApplicationSettings Repository
 
 1. **Implement ApplicationSettingsRepository**
-   - [ ] Create `application_settings_repository.py`
-   - [ ] Implement singleton pattern
-   - [ ] Add optimization for frequent access
+   - [✓] Create `application_settings_repository.py`
+   - [✓] Implement singleton pattern
+   - [✓] Add optimization for frequent access
 
 ```python
 # app/repositories/application_settings_repository.py
@@ -991,146 +991,7 @@ class TestTransactionManagement:
 ### 4. Performance Testing for Repositories
 
 1. **Create Performance Tests**
-   - [ ] Test bulk operations
-   - [ ] Test query optimization
-   - [ ] Test for N+1 problem
-
-```python
-# tests/repositories/test_repository_performance.py
-import pytest
-import time
-
-from app.repositories.chat_session_repository import ChatSessionRepository
-from app.repositories.message_repository import MessageRepository
-
-class TestRepositoryPerformance:
-    """Test repository performance aspects."""
-
-    @pytest.fixture
-    def setup_chat_session_with_messages(self, db_session):
-        """Create a chat session with many messages for performance testing."""
-        # Create dependencies
-        from app.models.character import Character
-        from app.models.user_profile import UserProfile
-        from app.models.ai_model import AIModel
-        from app.models.system_prompt import SystemPrompt
-        from app.models.chat_session import ChatSession
-
-        character = Character(label="perf_char", name="Performance Test Character")
-        profile = UserProfile(label="perf_user", name="Performance Test User")
-        ai_model = AIModel(label="perf_model", name="Performance Model", model_id="perf-test-model")
-        prompt = SystemPrompt(label="perf_prompt", content="Performance test prompt")
-
-        db_session.add_all([character, profile, ai_model, prompt])
-        db_session.flush()
-
-        # Create chat session
-        session = ChatSession(
-            title="Performance Test Session",
-            character_id=character.id,
-            user_profile_id=profile.id,
-            ai_model_id=ai_model.id,
-            system_prompt_id=prompt.id
-        )
-        db_session.add(session)
-        db_session.flush()
-
-        return session
-
-    def test_message_bulk_create_performance(self, db_session, setup_chat_session_with_messages):
-        """Test bulk message creation performance."""
-        repo = MessageRepository(db_session)
-        session_id = setup_chat_session_with_messages.id
-
-        # Prepare 100 message data objects
-        message_data = [
-            {
-                "chat_session_id": session_id,
-                "role": "user" if i % 2 == 0 else "assistant",
-                "content": f"Test message content {i}",
-                "sequence": i
-            }
-            for i in range(100)
-        ]
-
-        # Measure performance of bulk create
-        start_time = time.time()
-        messages = repo.create_bulk(message_data)
-        db_session.commit()
-        end_time = time.time()
-
-        # Verify results
-        assert len(messages) == 100
-
-        # Check performance
-        execution_time = end_time - start_time
-        assert execution_time < 0.5, f"Bulk create took {execution_time:.2f}s, expected < 0.5s"
-
-    def test_message_pagination_performance(self, db_session, setup_chat_session_with_messages):
-        """Test message pagination performance."""
-        # Add 200 messages first
-        message_repo = MessageRepository(db_session)
-        session_id = setup_chat_session_with_messages.id
-
-        message_data = [
-            {
-                "chat_session_id": session_id,
-                "role": "user" if i % 2 == 0 else "assistant",
-                "content": f"Pagination test message {i}",
-                "sequence": i
-            }
-            for i in range(200)
-        ]
-
-        message_repo.create_bulk(message_data)
-        db_session.commit()
-
-        # Test pagination performance
-        start_time = time.time()
-        messages, pagination = message_repo.get_paged_messages(session_id, page=2, page_size=50)
-        end_time = time.time()
-
-        # Verify results
-        assert len(messages) == 50
-        assert pagination["total_count"] == 200
-        assert pagination["current_page"] == 2
-
-        # Check performance
-        execution_time = end_time - start_time
-        assert execution_time < 0.1, f"Pagination query took {execution_time:.2f}s, expected < 0.1s"
-
-    def test_eager_loading_performance(self, db_session, setup_chat_session_with_messages):
-        """Test eager loading vs. lazy loading performance."""
-        session_repo = ChatSessionRepository(db_session)
-        session_id = setup_chat_session_with_messages.id
-
-        # Test with lazy loading
-        start_time = time.time()
-        session = session_repo.get_by_id(session_id)
-        # Access relationships to trigger lazy loading
-        _ = session.character.name
-        _ = session.user_profile.name
-        _ = session.ai_model.name
-        _ = session.system_prompt.content
-        lazy_time = time.time() - start_time
-
-        # Test with eager loading
-        start_time = time.time()
-        session = session_repo.get_by_id_with_relations(session_id)
-        # Access relationships (should already be loaded)
-        _ = session.character.name
-        _ = session.user_profile.name
-        _ = session.ai_model.name
-        _ = session.system_prompt.content
-        eager_time = time.time() - start_time
-
-        # Eager loading should be faster than lazy loading
-        # when accessing multiple relationships
-        assert eager_time < lazy_time, (
-            f"Eager loading ({eager_time:.4f}s) should be faster than "
-            f"lazy loading ({lazy_time:.4f}s)"
-        )
-```
+We won't do this for now.
 
 ## Performance Optimization
 
@@ -1146,8 +1007,8 @@ We will not do this for now.
 
 ### 3. Caching Strategy
 
-- [ ] Implement in-memory caching for frequently accessed data
-- [ ] Add cache invalidation on updates
+- [✓] Implement in-memory caching for frequently accessed data
+- [✓] Add cache invalidation on updates
 
 ```python
 # Add caching to the ApplicationSettingsRepository
@@ -1214,9 +1075,9 @@ Follow this checklist to ensure comprehensive repository implementation:
    - [✓] UserProfile repository
    - [✓] AIModel repository
    - [✓] SystemPrompt repository
-   - [ ] ChatSession repository
-   - [ ] Message repository
-   - [ ] ApplicationSettings repository
+   - [✓] ChatSession repository
+   - [✓] Message repository
+   - [✓] ApplicationSettings repository
 
 3. **Repository Registry**
    - [ ] Implement registry pattern
@@ -1225,6 +1086,7 @@ Follow this checklist to ensure comprehensive repository implementation:
 4. **Testing**
    - [✓] Unit tests for base repository
    - [✓] Unit tests for entity-specific repositories (Character, UserProfile, AIModel, SystemPrompt)
+   - [✓] Unit tests for ChatSessionRepository, MessageRepository, and ApplicationSettingsRepository
    - [✓] Transaction management tests
    - [ ] Performance tests
 
