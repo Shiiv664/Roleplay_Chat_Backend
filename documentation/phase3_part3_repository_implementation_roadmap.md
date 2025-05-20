@@ -1211,9 +1211,9 @@ Follow this checklist to ensure comprehensive repository implementation:
 
 2. **Entity-Specific Repositories**
    - [✓] Character repository
-   - [ ] UserProfile repository
-   - [ ] AIModel repository
-   - [ ] SystemPrompt repository
+   - [✓] UserProfile repository
+   - [✓] AIModel repository
+   - [✓] SystemPrompt repository
    - [ ] ChatSession repository
    - [ ] Message repository
    - [ ] ApplicationSettings repository
@@ -1224,7 +1224,7 @@ Follow this checklist to ensure comprehensive repository implementation:
 
 4. **Testing**
    - [✓] Unit tests for base repository
-   - [✓] Unit tests for entity-specific repositories (Character)
+   - [✓] Unit tests for entity-specific repositories (Character, UserProfile, AIModel, SystemPrompt)
    - [✓] Transaction management tests
    - [ ] Performance tests
 
