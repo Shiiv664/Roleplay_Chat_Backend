@@ -1,8 +1,13 @@
 """Tests for the SystemPromptRepository class."""
 
-import pytest
+from unittest.mock import patch
 
+import pytest
+from sqlalchemy.exc import SQLAlchemyError
+
+from app.models.application_settings import ApplicationSettings
 from app.repositories.system_prompt_repository import SystemPromptRepository
+from app.utils.exceptions import DatabaseError
 
 
 class TestSystemPromptRepository:
@@ -77,3 +82,44 @@ class TestSystemPromptRepository:
         # Search with no matches
         results = repo.search("no matches")
         assert len(results) == 0
+
+    def test_get_default_prompt(self, db_session, create_system_prompt):
+        """Test getting the default system prompt."""
+        repo = SystemPromptRepository(db_session)
+
+        # Create a system prompt
+        prompt = create_system_prompt(
+            label="default_prompt", content="This is the default system prompt"
+        )
+        db_session.add(prompt)
+        db_session.flush()
+
+        # Create application settings with this prompt as default
+        settings = ApplicationSettings(default_system_prompt_id=prompt.id)
+        db_session.add(settings)
+        db_session.commit()
+
+        # Get default prompt
+        default_prompt = repo.get_default_prompt()
+        assert default_prompt is not None
+        assert default_prompt.id == prompt.id
+        assert default_prompt.label == "default_prompt"
+
+    def test_get_default_prompt_not_found(self, db_session):
+        """Test getting the default system prompt when none is set."""
+        repo = SystemPromptRepository(db_session)
+
+        # Get default prompt without setting one
+        default_prompt = repo.get_default_prompt()
+        assert default_prompt is None
+
+    def test_database_error_in_get_default_prompt(self, db_session):
+        """Test handling of database errors in get_default_prompt method."""
+        repo = SystemPromptRepository(db_session)
+
+        # Mock session.query to raise SQLAlchemyError
+        with patch.object(
+            db_session, "query", side_effect=SQLAlchemyError("Test error")
+        ):
+            with pytest.raises(DatabaseError):
+                repo.get_default_prompt()

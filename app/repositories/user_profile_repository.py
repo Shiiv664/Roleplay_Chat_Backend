@@ -94,3 +94,31 @@ class UserProfileRepository(BaseRepository[UserProfile]):
             self._handle_db_exception(
                 e, f"Error searching user profiles with query '{query}'"
             )
+
+    def get_default_profile(self) -> Optional[UserProfile]:
+        """Get the default user profile if it exists.
+
+        This method queries the application_settings to find the default user profile.
+
+        Returns:
+            UserProfile or None: The default user profile if found, None otherwise
+
+        Raises:
+            DatabaseError: If a database error occurs
+        """
+        try:
+            # Join with ApplicationSettings to get the default user profile
+            from app.models.application_settings import ApplicationSettings
+
+            profile = (
+                self.session.query(UserProfile)
+                .join(
+                    ApplicationSettings,
+                    ApplicationSettings.default_user_profile_id == UserProfile.id,
+                )
+                .first()
+            )
+
+            return profile
+        except SQLAlchemyError as e:
+            self._handle_db_exception(e, "Error retrieving default user profile")

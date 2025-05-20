@@ -71,3 +71,31 @@ class SystemPromptRepository(BaseRepository[SystemPrompt]):
             self._handle_db_exception(
                 e, f"Error searching system prompts with query '{query}'"
             )
+
+    def get_default_prompt(self) -> Optional[SystemPrompt]:
+        """Get the default system prompt if it exists.
+
+        This method queries the application_settings to find the default system prompt.
+
+        Returns:
+            SystemPrompt or None: The default system prompt if found, None otherwise
+
+        Raises:
+            DatabaseError: If a database error occurs
+        """
+        try:
+            # Join with ApplicationSettings to get the default system prompt
+            from app.models.application_settings import ApplicationSettings
+
+            prompt = (
+                self.session.query(SystemPrompt)
+                .join(
+                    ApplicationSettings,
+                    ApplicationSettings.default_system_prompt_id == SystemPrompt.id,
+                )
+                .first()
+            )
+
+            return prompt
+        except SQLAlchemyError as e:
+            self._handle_db_exception(e, "Error retrieving default system prompt")

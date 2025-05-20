@@ -1,8 +1,13 @@
 """Tests for the UserProfileRepository class."""
 
-import pytest
+from unittest.mock import patch
 
+import pytest
+from sqlalchemy.exc import SQLAlchemyError
+
+from app.models.application_settings import ApplicationSettings
 from app.repositories.user_profile_repository import UserProfileRepository
+from app.utils.exceptions import DatabaseError
 
 
 class TestUserProfileRepository:
@@ -95,3 +100,42 @@ class TestUserProfileRepository:
         # Search with no matches
         results = repo.search("no matches")
         assert len(results) == 0
+
+    def test_get_default_profile(self, db_session, create_user_profile):
+        """Test getting the default user profile."""
+        repo = UserProfileRepository(db_session)
+
+        # Create a user profile
+        profile = create_user_profile(label="default_profile", name="Default Profile")
+        db_session.add(profile)
+        db_session.flush()
+
+        # Create application settings with this profile as default
+        settings = ApplicationSettings(default_user_profile_id=profile.id)
+        db_session.add(settings)
+        db_session.commit()
+
+        # Get default profile
+        default_profile = repo.get_default_profile()
+        assert default_profile is not None
+        assert default_profile.id == profile.id
+        assert default_profile.label == "default_profile"
+
+    def test_get_default_profile_not_found(self, db_session):
+        """Test getting the default user profile when none is set."""
+        repo = UserProfileRepository(db_session)
+
+        # Get default profile without setting one
+        default_profile = repo.get_default_profile()
+        assert default_profile is None
+
+    def test_database_error_in_get_default_profile(self, db_session):
+        """Test handling of database errors in get_default_profile method."""
+        repo = UserProfileRepository(db_session)
+
+        # Mock session.query to raise SQLAlchemyError
+        with patch.object(
+            db_session, "query", side_effect=SQLAlchemyError("Test error")
+        ):
+            with pytest.raises(DatabaseError):
+                repo.get_default_profile()

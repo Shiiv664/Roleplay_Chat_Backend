@@ -67,3 +67,31 @@ class AIModelRepository(BaseRepository[AIModel]):
             self._handle_db_exception(
                 e, f"Error searching AI models with query '{query}'"
             )
+
+    def get_default_model(self) -> Optional[AIModel]:
+        """Get the default AI model if it exists.
+
+        This method queries the application_settings to find the default AI model.
+
+        Returns:
+            AIModel or None: The default AI model if found, None otherwise
+
+        Raises:
+            DatabaseError: If a database error occurs
+        """
+        try:
+            # Join with ApplicationSettings to get the default AI model
+            from app.models.application_settings import ApplicationSettings
+
+            model = (
+                self.session.query(AIModel)
+                .join(
+                    ApplicationSettings,
+                    ApplicationSettings.default_ai_model_id == AIModel.id,
+                )
+                .first()
+            )
+
+            return model
+        except SQLAlchemyError as e:
+            self._handle_db_exception(e, "Error retrieving default AI model")

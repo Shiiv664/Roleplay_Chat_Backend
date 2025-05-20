@@ -1,8 +1,13 @@
 """Tests for the AIModelRepository class."""
 
-import pytest
+from unittest.mock import patch
 
+import pytest
+from sqlalchemy.exc import SQLAlchemyError
+
+from app.models.application_settings import ApplicationSettings
 from app.repositories.ai_model_repository import AIModelRepository
+from app.utils.exceptions import DatabaseError
 
 
 class TestAIModelRepository:
@@ -65,3 +70,42 @@ class TestAIModelRepository:
         # Search with no matches
         results = repo.search("no matches")
         assert len(results) == 0
+
+    def test_get_default_model(self, db_session, create_ai_model):
+        """Test getting the default AI model."""
+        repo = AIModelRepository(db_session)
+
+        # Create an AI model
+        model = create_ai_model(label="default_model", description="Default AI model")
+        db_session.add(model)
+        db_session.flush()
+
+        # Create application settings with this model as default
+        settings = ApplicationSettings(default_ai_model_id=model.id)
+        db_session.add(settings)
+        db_session.commit()
+
+        # Get default model
+        default_model = repo.get_default_model()
+        assert default_model is not None
+        assert default_model.id == model.id
+        assert default_model.label == "default_model"
+
+    def test_get_default_model_not_found(self, db_session):
+        """Test getting the default AI model when none is set."""
+        repo = AIModelRepository(db_session)
+
+        # Get default model without setting one
+        default_model = repo.get_default_model()
+        assert default_model is None
+
+    def test_database_error_in_get_default_model(self, db_session):
+        """Test handling of database errors in get_default_model method."""
+        repo = AIModelRepository(db_session)
+
+        # Mock session.query to raise SQLAlchemyError
+        with patch.object(
+            db_session, "query", side_effect=SQLAlchemyError("Test error")
+        ):
+            with pytest.raises(DatabaseError):
+                repo.get_default_model()
