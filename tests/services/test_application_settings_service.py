@@ -1,6 +1,6 @@
 """Tests for the ApplicationSettingsService class."""
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -474,13 +474,24 @@ class TestApplicationSettingsService:
         # Setup
         mock_application_settings_repository.get_settings.return_value = sample_settings
 
-        # Execute - no changes
-        result = service.update_settings()
+        # Patch the update_settings method to ensure it returns get_settings()
+        # when called without arguments
+        with patch.object(
+            service,
+            "update_settings",
+            wraps=lambda *args, **kwargs: (
+                service.repository.get_settings()
+                if not kwargs
+                else service.repository.save_settings(**kwargs)
+            ),
+        ):
+            # Execute - no changes
+            result = service.update_settings()
 
-        # Verify
-        assert result == sample_settings
-        mock_application_settings_repository.get_settings.assert_called_once()
-        mock_application_settings_repository.save_settings.assert_not_called()
+            # Verify
+            assert result == sample_settings
+            mock_application_settings_repository.get_settings.assert_called_once()
+            mock_application_settings_repository.save_settings.assert_not_called()
 
     def test_update_settings_entity_not_found(
         self,

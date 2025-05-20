@@ -239,6 +239,7 @@ class MessageService:
 
         # Track sessions to update later
         session_ids = set()
+        verified_session_ids = set()
 
         # Validate all messages before creating any
         for i, message_data in enumerate(messages_data):
@@ -250,9 +251,12 @@ class MessageService:
                         details={"index": i, "field": field},
                     )
 
-            # Verify chat session exists
+            # Verify chat session exists (only once per unique session ID)
             session_id = message_data["chat_session_id"]
-            self._verify_chat_session_exists(session_id)
+            if session_id not in verified_session_ids:
+                self._verify_chat_session_exists(session_id)
+                verified_session_ids.add(session_id)
+
             session_ids.add(session_id)
 
             # Validate content

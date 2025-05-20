@@ -298,9 +298,9 @@ class TestServiceIntegration:
         )
 
         # Verify
-        mock_repositories["chat_session_repository"].get_by_id.assert_called_once_with(
-            1
-        )
+        # get_by_id is called twice: once by update_session and once by create_user_message
+        assert mock_repositories["chat_session_repository"].get_by_id.call_count == 2
+        mock_repositories["chat_session_repository"].get_by_id.assert_called_with(1)
         mock_repositories["ai_model_repository"].get_by_id.assert_called_once_with(2)
         mock_repositories["chat_session_repository"].update.assert_called_once()
 
