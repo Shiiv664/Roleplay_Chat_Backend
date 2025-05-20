@@ -21,6 +21,7 @@ from app.api.namespaces.ai_models import api as ai_models_ns
 
 # Import and register namespaces
 from app.api.namespaces.characters import api as characters_ns
+from app.api.namespaces.chat_sessions import api as chat_sessions_ns
 from app.api.namespaces.system_prompts import api as system_prompts_ns
 from app.api.namespaces.user_profiles import api as user_profiles_ns
 
@@ -29,9 +30,9 @@ api.add_namespace(characters_ns, path="/characters")
 api.add_namespace(user_profiles_ns, path="/user-profiles")
 api.add_namespace(ai_models_ns, path="/ai-models")
 api.add_namespace(system_prompts_ns, path="/system-prompts")
+api.add_namespace(chat_sessions_ns, path="/chat-sessions")
 
 # Initialize other namespaces as they are implemented
-# api.add_namespace(chat_sessions_ns, path='/chat-sessions')
 # api.add_namespace(messages_ns, path='/messages')
 # api.add_namespace(settings_ns, path='/settings')
 
