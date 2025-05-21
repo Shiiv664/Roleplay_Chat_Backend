@@ -443,7 +443,14 @@ def client(app, db_session):
     Returns:
         FlaskClient: Flask test client for making requests.
     """
+    import shutil
+    from pathlib import Path
     from unittest.mock import patch
+
+    # Clean up test uploads directory before test
+    test_uploads_dir = Path("test_uploads")
+    if test_uploads_dir.exists():
+        shutil.rmtree(test_uploads_dir)
 
     with app.test_client() as client:
         with app.app_context():
@@ -456,4 +463,20 @@ def client(app, db_session):
                     mock_get_db_session.return_value.__enter__ = lambda x: db_session
                     mock_get_db_session.return_value.__exit__ = lambda x, *args: None
 
-                    yield client
+                    # Patch the Path import in file_upload_service for testing
+                    with patch("app.services.file_upload_service.Path") as mock_path:
+
+                        def test_path(path_str):
+                            # If it's the uploads directory, redirect to test_uploads
+                            if path_str == "uploads":
+                                return Path("test_uploads")
+                            return Path(path_str)
+
+                        mock_path.side_effect = test_path
+
+                        try:
+                            yield client
+                        finally:
+                            # Clean up test uploads directory after test
+                            if test_uploads_dir.exists():
+                                shutil.rmtree(test_uploads_dir)
