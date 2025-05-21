@@ -636,7 +636,7 @@
         ]
       },
       "post": {
-        "description": "## Request Formats:\n\n### 1. JSON (Content-Type: application/json)\nStandard character creation with avatar_image as URL string.\nUses the CharacterCreate schema.\n\n### 2. Multipart Form (Content-Type: multipart/form-data)  \nCharacter creation with file upload support:\n- **label**: string (required) - Unique character identifier\n- **name**: string (required) - Character display name\n- **description**: string (optional) - Character description\n- **avatar_image**: file (optional) - Image file (PNG, JPG, GIF, WebP, max 5MB, max 1024x1024px)\n\n## File Upload Details:\n- Supported formats: PNG, JPG, JPEG, GIF, WebP\n- Maximum file size: 5MB\n- Maximum dimensions: 1024x1024 pixels\n- Large images are automatically resized\n- Files are stored securely with UUID-generated names",
+        "description": "## Request Formats:\n\n### 1. JSON (Content-Type: application/json)\nStandard character creation with avatar_image as URL string.\nUses the CharacterCreate schema.\n\n### 2. Multipart Form (Content-Type: multipart/form-data)\nCharacter creation with file upload support:\n- **label**: string (required) - Unique character identifier\n- **name**: string (required) - Character display name\n- **description**: string (optional) - Character description\n- **avatar_image**: file (optional) - Image file (PNG, JPG, GIF, WebP, max 5MB, max 1024x1024px)\n\n## File Upload Details:\n- Supported formats: PNG, JPG, JPEG, GIF, WebP\n- Maximum file size: 5MB\n- Maximum dimensions: 1024x1024 pixels\n- Large images are automatically resized\n- Files are stored securely with UUID-generated names\n- Uploaded files are accessible via `/uploads/avatars/{filename}` URLs",
         "operationId": "create_character",
         "parameters": [
           {
@@ -1729,6 +1729,7 @@
         ]
       },
       "post": {
+        "description": "## Request Formats:\n\n### 1. JSON (Content-Type: application/json)\nStandard user profile creation with avatar_image as URL string.\nUses the UserProfileCreate schema.\n\n### 2. Multipart Form (Content-Type: multipart/form-data)\nUser profile creation with file upload support:\n- **label**: string (required) - Unique user profile identifier\n- **name**: string (required) - User profile display name\n- **description**: string (optional) - User profile description\n- **avatar_image**: file (optional) - Image file (PNG, JPG, GIF, WebP, max 5MB, max 1024x1024px)\n\n## File Upload Details:\n- Supported formats: PNG, JPG, JPEG, GIF, WebP\n- Maximum file size: 5MB\n- Maximum dimensions: 1024x1024 pixels\n- Large images are automatically resized\n- Files are stored securely with UUID-generated names\n- Uploaded files are accessible via `/uploads/avatars/{filename}` URLs",
         "operationId": "create_user_profile",
         "parameters": [
           {
@@ -1738,6 +1739,17 @@
             "schema": {
               "$ref": "#/definitions/UserProfileCreate"
             }
+          },
+          {
+            "default": "application/json",
+            "description": "Content type of the request",
+            "enum": [
+              "application/json",
+              "multipart/form-data"
+            ],
+            "in": "header",
+            "name": "Content-Type",
+            "type": "string"
           },
           {
             "description": "An optional fields mask",
@@ -1753,9 +1765,18 @@
             "schema": {
               "$ref": "#/definitions/Response"
             }
+          },
+          "201": {
+            "description": "User profile created successfully"
+          },
+          "400": {
+            "description": "Bad request - validation error or invalid file"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
-        "summary": "Create a new user profile",
+        "summary": "Create a new user profile with optional avatar image upload",
         "tags": [
           "user-profiles"
         ]
