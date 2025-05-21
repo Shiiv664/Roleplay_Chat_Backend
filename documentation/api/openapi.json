@@ -1,0 +1,1959 @@
+{
+  "basePath": "/api/v1",
+  "consumes": [
+    "application/json"
+  ],
+  "definitions": {
+    "AIModelCreate": {
+      "properties": {
+        "description": {
+          "description": "AI model description",
+          "type": "string"
+        },
+        "label": {
+          "description": "Unique AI model identifier",
+          "maxLength": 50,
+          "minLength": 2,
+          "type": "string"
+        }
+      },
+      "required": [
+        "label"
+      ],
+      "type": "object"
+    },
+    "AIModelUpdate": {
+      "properties": {
+        "description": {
+          "description": "AI model description",
+          "type": "string"
+        },
+        "label": {
+          "description": "Unique AI model identifier",
+          "maxLength": 50,
+          "minLength": 2,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ApplicationSettingsUpdate": {
+      "properties": {
+        "default_ai_model_id": {
+          "description": "Default AI Model ID",
+          "type": "integer"
+        },
+        "default_avatar_image": {
+          "description": "Default avatar image path or URL",
+          "type": "string"
+        },
+        "default_system_prompt_id": {
+          "description": "Default System Prompt ID",
+          "type": "integer"
+        },
+        "default_user_profile_id": {
+          "description": "Default User Profile ID",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "CharacterCreate": {
+      "properties": {
+        "avatar_image": {
+          "description": "Character avatar image path",
+          "type": "string"
+        },
+        "description": {
+          "description": "Character description",
+          "type": "string"
+        },
+        "label": {
+          "description": "Unique character identifier",
+          "maxLength": 50,
+          "minLength": 1,
+          "type": "string"
+        },
+        "name": {
+          "description": "Character name",
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "label",
+        "name"
+      ],
+      "type": "object"
+    },
+    "CharacterUpdate": {
+      "properties": {
+        "avatar_image": {
+          "description": "Character avatar image path",
+          "type": "string"
+        },
+        "description": {
+          "description": "Character description",
+          "type": "string"
+        },
+        "label": {
+          "description": "Unique character identifier",
+          "maxLength": 50,
+          "minLength": 1,
+          "type": "string"
+        },
+        "name": {
+          "description": "Character name",
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ChatSessionCreate": {
+      "properties": {
+        "ai_model_id": {
+          "description": "AI Model ID for this session",
+          "type": "integer"
+        },
+        "character_id": {
+          "description": "Character ID for this session",
+          "type": "integer"
+        },
+        "post_prompt": {
+          "description": "Optional text to add after each AI request",
+          "type": "string"
+        },
+        "post_prompt_enabled": {
+          "default": false,
+          "description": "Whether post-prompt is enabled",
+          "type": "boolean"
+        },
+        "pre_prompt": {
+          "description": "Optional text to add before each AI request",
+          "type": "string"
+        },
+        "pre_prompt_enabled": {
+          "default": false,
+          "description": "Whether pre-prompt is enabled",
+          "type": "boolean"
+        },
+        "system_prompt_id": {
+          "description": "System Prompt ID for this session",
+          "type": "integer"
+        },
+        "user_profile_id": {
+          "description": "User Profile ID for this session",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "ai_model_id",
+        "character_id",
+        "system_prompt_id",
+        "user_profile_id"
+      ],
+      "type": "object"
+    },
+    "ChatSessionUpdate": {
+      "properties": {
+        "ai_model_id": {
+          "description": "AI Model ID for this session",
+          "type": "integer"
+        },
+        "post_prompt": {
+          "description": "Optional text to add after each AI request",
+          "type": "string"
+        },
+        "post_prompt_enabled": {
+          "description": "Whether post-prompt is enabled",
+          "type": "boolean"
+        },
+        "pre_prompt": {
+          "description": "Optional text to add before each AI request",
+          "type": "string"
+        },
+        "pre_prompt_enabled": {
+          "description": "Whether pre-prompt is enabled",
+          "type": "boolean"
+        },
+        "system_prompt_id": {
+          "description": "System Prompt ID for this session",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "MessageCreate": {
+      "properties": {
+        "content": {
+          "description": "Message content",
+          "type": "string"
+        },
+        "role": {
+          "description": "Message role (user or assistant)",
+          "enum": [
+            "user",
+            "assistant"
+          ],
+          "example": "user",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content",
+        "role"
+      ],
+      "type": "object"
+    },
+    "MessageUpdate": {
+      "properties": {
+        "content": {
+          "description": "Updated message content",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ],
+      "type": "object"
+    },
+    "Response": {
+      "properties": {
+        "data": {
+          "description": "Response data",
+          "type": "object"
+        },
+        "error": {
+          "description": "Error information, if any",
+          "type": "object"
+        },
+        "meta": {
+          "description": "Additional metadata",
+          "type": "object"
+        },
+        "success": {
+          "default": true,
+          "description": "Success status",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "SystemPromptCreate": {
+      "properties": {
+        "content": {
+          "description": "System prompt content",
+          "minLength": 1,
+          "type": "string"
+        },
+        "label": {
+          "description": "Unique system prompt identifier",
+          "maxLength": 50,
+          "minLength": 2,
+          "type": "string"
+        }
+      },
+      "required": [
+        "content",
+        "label"
+      ],
+      "type": "object"
+    },
+    "SystemPromptUpdate": {
+      "properties": {
+        "content": {
+          "description": "System prompt content",
+          "minLength": 1,
+          "type": "string"
+        },
+        "label": {
+          "description": "Unique system prompt identifier",
+          "maxLength": 50,
+          "minLength": 2,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "UserMessageCreate": {
+      "properties": {
+        "content": {
+          "description": "User message content",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ],
+      "type": "object"
+    },
+    "UserProfileCreate": {
+      "properties": {
+        "avatar_image": {
+          "description": "User profile avatar image path",
+          "type": "string"
+        },
+        "description": {
+          "description": "User profile description",
+          "type": "string"
+        },
+        "label": {
+          "description": "Unique user profile identifier",
+          "maxLength": 50,
+          "minLength": 2,
+          "type": "string"
+        },
+        "name": {
+          "description": "User profile name",
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "label",
+        "name"
+      ],
+      "type": "object"
+    },
+    "UserProfileUpdate": {
+      "properties": {
+        "avatar_image": {
+          "description": "User profile avatar image path",
+          "type": "string"
+        },
+        "description": {
+          "description": "User profile description",
+          "type": "string"
+        },
+        "label": {
+          "description": "Unique user profile identifier",
+          "maxLength": 50,
+          "minLength": 2,
+          "type": "string"
+        },
+        "name": {
+          "description": "User profile name",
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "info": {
+    "description": "API for the Roleplay Chat Web App",
+    "title": "Roleplay Chat API",
+    "version": "1.0"
+  },
+  "paths": {
+    "/ai-models/": {
+      "get": {
+        "operationId": "list_ai_models",
+        "parameters": [
+          {
+            "default": 1,
+            "description": "Page number",
+            "in": "query",
+            "name": "page",
+            "type": "integer"
+          },
+          {
+            "default": 20,
+            "description": "Items per page",
+            "in": "query",
+            "name": "page_size",
+            "type": "integer"
+          },
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          }
+        },
+        "summary": "List all AI models with pagination",
+        "tags": [
+          "ai-models"
+        ]
+      },
+      "post": {
+        "operationId": "create_ai_model",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "payload",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AIModelCreate"
+            }
+          },
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          }
+        },
+        "summary": "Create a new AI model",
+        "tags": [
+          "ai-models"
+        ]
+      }
+    },
+    "/ai-models/default": {
+      "get": {
+        "operationId": "get_default_ai_model",
+        "parameters": [
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          }
+        },
+        "summary": "Get the default AI model",
+        "tags": [
+          "ai-models"
+        ]
+      }
+    },
+    "/ai-models/search": {
+      "get": {
+        "operationId": "search_ai_models",
+        "parameters": [
+          {
+            "description": "Search query",
+            "in": "query",
+            "name": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "default": 1,
+            "description": "Page number",
+            "in": "query",
+            "name": "page",
+            "type": "integer"
+          },
+          {
+            "default": 20,
+            "description": "Items per page",
+            "in": "query",
+            "name": "page_size",
+            "type": "integer"
+          },
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          }
+        },
+        "summary": "Search for AI models by label or description",
+        "tags": [
+          "ai-models"
+        ]
+      }
+    },
+    "/ai-models/{id}": {
+      "delete": {
+        "operationId": "delete_ai_model",
+        "parameters": [
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "404": {
+            "description": "AI model not found"
+          }
+        },
+        "summary": "Delete an AI model",
+        "tags": [
+          "ai-models"
+        ]
+      },
+      "get": {
+        "operationId": "get_ai_model",
+        "parameters": [
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "404": {
+            "description": "AI model not found"
+          }
+        },
+        "summary": "Get an AI model by ID",
+        "tags": [
+          "ai-models"
+        ]
+      },
+      "parameters": [
+        {
+          "description": "The AI model identifier",
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "put": {
+        "operationId": "update_ai_model",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "payload",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AIModelUpdate"
+            }
+          },
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "404": {
+            "description": "AI model not found"
+          }
+        },
+        "summary": "Update an AI model",
+        "tags": [
+          "ai-models"
+        ]
+      }
+    },
+    "/characters/": {
+      "get": {
+        "operationId": "list_characters",
+        "parameters": [
+          {
+            "default": 1,
+            "description": "Page number",
+            "in": "query",
+            "name": "page",
+            "type": "integer"
+          },
+          {
+            "default": 20,
+            "description": "Items per page",
+            "in": "query",
+            "name": "page_size",
+            "type": "integer"
+          },
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          }
+        },
+        "summary": "List all characters with pagination",
+        "tags": [
+          "characters"
+        ]
+      },
+      "post": {
+        "operationId": "create_character",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "payload",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CharacterCreate"
+            }
+          },
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          }
+        },
+        "summary": "Create a new character",
+        "tags": [
+          "characters"
+        ]
+      }
+    },
+    "/characters/search": {
+      "get": {
+        "operationId": "search_characters",
+        "parameters": [
+          {
+            "description": "Search query",
+            "in": "query",
+            "name": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "default": 1,
+            "description": "Page number",
+            "in": "query",
+            "name": "page",
+            "type": "integer"
+          },
+          {
+            "default": 20,
+            "description": "Items per page",
+            "in": "query",
+            "name": "page_size",
+            "type": "integer"
+          },
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          }
+        },
+        "summary": "Search for characters by name or description",
+        "tags": [
+          "characters"
+        ]
+      }
+    },
+    "/characters/{id}": {
+      "delete": {
+        "operationId": "delete_character",
+        "parameters": [
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "404": {
+            "description": "Character not found"
+          }
+        },
+        "summary": "Delete a character",
+        "tags": [
+          "characters"
+        ]
+      },
+      "get": {
+        "operationId": "get_character",
+        "parameters": [
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "404": {
+            "description": "Character not found"
+          }
+        },
+        "summary": "Get a character by ID",
+        "tags": [
+          "characters"
+        ]
+      },
+      "parameters": [
+        {
+          "description": "The character identifier",
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "put": {
+        "operationId": "update_character",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "payload",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CharacterUpdate"
+            }
+          },
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "404": {
+            "description": "Character not found"
+          }
+        },
+        "summary": "Update a character",
+        "tags": [
+          "characters"
+        ]
+      }
+    },
+    "/chat-sessions/": {
+      "get": {
+        "operationId": "list_chat_sessions",
+        "parameters": [
+          {
+            "default": 1,
+            "description": "Page number",
+            "in": "query",
+            "name": "page",
+            "type": "integer"
+          },
+          {
+            "default": 20,
+            "description": "Items per page",
+            "in": "query",
+            "name": "page_size",
+            "type": "integer"
+          },
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          }
+        },
+        "summary": "List all chat sessions with pagination",
+        "tags": [
+          "chat-sessions"
+        ]
+      },
+      "post": {
+        "operationId": "create_chat_session",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "payload",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ChatSessionCreate"
+            }
+          },
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          }
+        },
+        "summary": "Create a new chat session",
+        "tags": [
+          "chat-sessions"
+        ]
+      }
+    },
+    "/chat-sessions/character/{character_id}": {
+      "get": {
+        "operationId": "get_chat_sessions_by_character",
+        "parameters": [
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          }
+        },
+        "summary": "Get chat sessions for a specific character",
+        "tags": [
+          "chat-sessions"
+        ]
+      },
+      "parameters": [
+        {
+          "description": "The character identifier",
+          "in": "path",
+          "name": "character_id",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    },
+    "/chat-sessions/recent": {
+      "get": {
+        "operationId": "get_recent_chat_sessions",
+        "parameters": [
+          {
+            "default": 10,
+            "description": "Maximum number of recent sessions to return",
+            "in": "query",
+            "name": "limit",
+            "type": "integer"
+          },
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          }
+        },
+        "summary": "Get recent chat sessions",
+        "tags": [
+          "chat-sessions"
+        ]
+      }
+    },
+    "/chat-sessions/user-profile/{profile_id}": {
+      "get": {
+        "operationId": "get_chat_sessions_by_user_profile",
+        "parameters": [
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          }
+        },
+        "summary": "Get chat sessions for a specific user profile",
+        "tags": [
+          "chat-sessions"
+        ]
+      },
+      "parameters": [
+        {
+          "description": "The user profile identifier",
+          "in": "path",
+          "name": "profile_id",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    },
+    "/chat-sessions/{id}": {
+      "delete": {
+        "operationId": "delete_chat_session",
+        "parameters": [
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "404": {
+            "description": "Chat session not found"
+          }
+        },
+        "summary": "Delete a chat session",
+        "tags": [
+          "chat-sessions"
+        ]
+      },
+      "get": {
+        "operationId": "get_chat_session",
+        "parameters": [
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "404": {
+            "description": "Chat session not found"
+          }
+        },
+        "summary": "Get a chat session by ID",
+        "tags": [
+          "chat-sessions"
+        ]
+      },
+      "parameters": [
+        {
+          "description": "The chat session identifier",
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "put": {
+        "operationId": "update_chat_session",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "payload",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ChatSessionUpdate"
+            }
+          },
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "404": {
+            "description": "Chat session not found"
+          }
+        },
+        "summary": "Update a chat session",
+        "tags": [
+          "chat-sessions"
+        ]
+      }
+    },
+    "/messages/chat-sessions/{chat_session_id}": {
+      "get": {
+        "description": "Args:\n    chat_session_id: The chat session ID\n\nReturns:\n    List of messages with pagination",
+        "operationId": "get_messages",
+        "parameters": [
+          {
+            "default": 1,
+            "description": "Page number",
+            "in": "query",
+            "name": "page",
+            "type": "integer"
+          },
+          {
+            "default": 20,
+            "description": "Items per page",
+            "in": "query",
+            "name": "page_size",
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "Chat session not found"
+          }
+        },
+        "summary": "Get messages for a chat session",
+        "tags": [
+          "messages"
+        ]
+      },
+      "parameters": [
+        {
+          "description": "The chat session identifier",
+          "in": "path",
+          "name": "chat_session_id",
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "post": {
+        "description": "Args:\n    chat_session_id: The chat session ID\n\nReturns:\n    The created message data",
+        "operationId": "create_message",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "payload",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MessageCreate"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Message created",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "Chat session not found"
+          }
+        },
+        "summary": "Create a new message in a chat session",
+        "tags": [
+          "messages"
+        ]
+      }
+    },
+    "/messages/chat-sessions/{chat_session_id}/latest": {
+      "get": {
+        "description": "Args:\n    chat_session_id: The chat session ID\n\nReturns:\n    List of latest messages",
+        "operationId": "get_latest_messages",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "404": {
+            "description": "Chat session not found"
+          }
+        },
+        "summary": "Get the latest messages from a chat session",
+        "tags": [
+          "messages"
+        ]
+      },
+      "parameters": [
+        {
+          "description": "The chat session identifier",
+          "in": "path",
+          "name": "chat_session_id",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    },
+    "/messages/chat-sessions/{chat_session_id}/regenerate": {
+      "parameters": [
+        {
+          "description": "The chat session identifier",
+          "in": "path",
+          "name": "chat_session_id",
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "post": {
+        "description": "Args:\n    chat_session_id: The chat session ID\n\nReturns:\n    The new AI response",
+        "operationId": "regenerate_response",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "404": {
+            "description": "Chat session not found or no messages to regenerate"
+          }
+        },
+        "summary": "Regenerate the most recent AI response",
+        "tags": [
+          "messages"
+        ]
+      }
+    },
+    "/messages/chat-sessions/{chat_session_id}/user-message": {
+      "parameters": [
+        {
+          "description": "The chat session identifier",
+          "in": "path",
+          "name": "chat_session_id",
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "post": {
+        "description": "Args:\n    chat_session_id: The chat session ID\n\nReturns:\n    Both user message and AI response",
+        "operationId": "create_user_message",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "payload",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UserMessageCreate"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Message created",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "Chat session not found"
+          }
+        },
+        "summary": "Create a user message and generate an AI response",
+        "tags": [
+          "messages"
+        ]
+      }
+    },
+    "/messages/{message_id}": {
+      "delete": {
+        "description": "Args:\n    message_id: The message ID\n\nReturns:\n    Success message",
+        "operationId": "delete_message",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "404": {
+            "description": "Message not found"
+          }
+        },
+        "summary": "Delete a message",
+        "tags": [
+          "messages"
+        ]
+      },
+      "get": {
+        "description": "Args:\n    message_id: The message ID\n\nReturns:\n    The message data",
+        "operationId": "get_message",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "404": {
+            "description": "Message not found"
+          }
+        },
+        "summary": "Get a message by ID",
+        "tags": [
+          "messages"
+        ]
+      },
+      "parameters": [
+        {
+          "description": "The message identifier",
+          "in": "path",
+          "name": "message_id",
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "put": {
+        "description": "Only the content can be updated, not the role or chat session.\n\nArgs:\n    message_id: The message ID\n\nReturns:\n    The updated message data",
+        "operationId": "update_message",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "payload",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MessageUpdate"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "Message not found"
+          }
+        },
+        "summary": "Update a message",
+        "tags": [
+          "messages"
+        ]
+      }
+    },
+    "/settings/": {
+      "get": {
+        "description": "Returns:\n    The application settings data",
+        "operationId": "get_settings",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          }
+        },
+        "summary": "Get the application settings",
+        "tags": [
+          "settings"
+        ]
+      },
+      "put": {
+        "description": "Returns:\n    The updated application settings data",
+        "operationId": "update_settings",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "payload",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ApplicationSettingsUpdate"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "Referenced entity not found"
+          }
+        },
+        "summary": "Update the application settings",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/settings/reset": {
+      "post": {
+        "description": "Returns:\n    Success message and reset settings",
+        "operationId": "reset_settings",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          }
+        },
+        "summary": "Reset the application settings to defaults",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/system-prompts/": {
+      "get": {
+        "operationId": "list_system_prompts",
+        "parameters": [
+          {
+            "default": 1,
+            "description": "Page number",
+            "in": "query",
+            "name": "page",
+            "type": "integer"
+          },
+          {
+            "default": 20,
+            "description": "Items per page",
+            "in": "query",
+            "name": "page_size",
+            "type": "integer"
+          },
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          }
+        },
+        "summary": "List all system prompts with pagination",
+        "tags": [
+          "system-prompts"
+        ]
+      },
+      "post": {
+        "operationId": "create_system_prompt",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "payload",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SystemPromptCreate"
+            }
+          },
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          }
+        },
+        "summary": "Create a new system prompt",
+        "tags": [
+          "system-prompts"
+        ]
+      }
+    },
+    "/system-prompts/default": {
+      "get": {
+        "operationId": "get_default_system_prompt",
+        "parameters": [
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          }
+        },
+        "summary": "Get the default system prompt",
+        "tags": [
+          "system-prompts"
+        ]
+      }
+    },
+    "/system-prompts/search": {
+      "get": {
+        "operationId": "search_system_prompts",
+        "parameters": [
+          {
+            "description": "Search query",
+            "in": "query",
+            "name": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "default": 1,
+            "description": "Page number",
+            "in": "query",
+            "name": "page",
+            "type": "integer"
+          },
+          {
+            "default": 20,
+            "description": "Items per page",
+            "in": "query",
+            "name": "page_size",
+            "type": "integer"
+          },
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          }
+        },
+        "summary": "Search for system prompts by label or content",
+        "tags": [
+          "system-prompts"
+        ]
+      }
+    },
+    "/system-prompts/{id}": {
+      "delete": {
+        "operationId": "delete_system_prompt",
+        "parameters": [
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "404": {
+            "description": "System prompt not found"
+          }
+        },
+        "summary": "Delete a system prompt",
+        "tags": [
+          "system-prompts"
+        ]
+      },
+      "get": {
+        "operationId": "get_system_prompt",
+        "parameters": [
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "404": {
+            "description": "System prompt not found"
+          }
+        },
+        "summary": "Get a system prompt by ID",
+        "tags": [
+          "system-prompts"
+        ]
+      },
+      "parameters": [
+        {
+          "description": "The system prompt identifier",
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "put": {
+        "operationId": "update_system_prompt",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "payload",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SystemPromptUpdate"
+            }
+          },
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "404": {
+            "description": "System prompt not found"
+          }
+        },
+        "summary": "Update a system prompt",
+        "tags": [
+          "system-prompts"
+        ]
+      }
+    },
+    "/user-profiles/": {
+      "get": {
+        "operationId": "list_user_profiles",
+        "parameters": [
+          {
+            "default": 1,
+            "description": "Page number",
+            "in": "query",
+            "name": "page",
+            "type": "integer"
+          },
+          {
+            "default": 20,
+            "description": "Items per page",
+            "in": "query",
+            "name": "page_size",
+            "type": "integer"
+          },
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          }
+        },
+        "summary": "List all user profiles with pagination",
+        "tags": [
+          "user-profiles"
+        ]
+      },
+      "post": {
+        "operationId": "create_user_profile",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "payload",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UserProfileCreate"
+            }
+          },
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          }
+        },
+        "summary": "Create a new user profile",
+        "tags": [
+          "user-profiles"
+        ]
+      }
+    },
+    "/user-profiles/default": {
+      "get": {
+        "operationId": "get_default_user_profile",
+        "parameters": [
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          }
+        },
+        "summary": "Get the default user profile",
+        "tags": [
+          "user-profiles"
+        ]
+      }
+    },
+    "/user-profiles/search": {
+      "get": {
+        "operationId": "search_user_profiles",
+        "parameters": [
+          {
+            "description": "Search query",
+            "in": "query",
+            "name": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "default": 1,
+            "description": "Page number",
+            "in": "query",
+            "name": "page",
+            "type": "integer"
+          },
+          {
+            "default": 20,
+            "description": "Items per page",
+            "in": "query",
+            "name": "page_size",
+            "type": "integer"
+          },
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          }
+        },
+        "summary": "Search for user profiles by name or description",
+        "tags": [
+          "user-profiles"
+        ]
+      }
+    },
+    "/user-profiles/{id}": {
+      "delete": {
+        "operationId": "delete_user_profile",
+        "parameters": [
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "404": {
+            "description": "User profile not found"
+          }
+        },
+        "summary": "Delete a user profile",
+        "tags": [
+          "user-profiles"
+        ]
+      },
+      "get": {
+        "operationId": "get_user_profile",
+        "parameters": [
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "404": {
+            "description": "User profile not found"
+          }
+        },
+        "summary": "Get a user profile by ID",
+        "tags": [
+          "user-profiles"
+        ]
+      },
+      "parameters": [
+        {
+          "description": "The user profile identifier",
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "put": {
+        "operationId": "update_user_profile",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "payload",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UserProfileUpdate"
+            }
+          },
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "404": {
+            "description": "User profile not found"
+          }
+        },
+        "summary": "Update a user profile",
+        "tags": [
+          "user-profiles"
+        ]
+      }
+    }
+  },
+  "produces": [
+    "application/json"
+  ],
+  "responses": {
+    "MaskError": {
+      "description": "When any error occurs on mask"
+    },
+    "ParseError": {
+      "description": "When a mask can't be parsed"
+    }
+  },
+  "swagger": "2.0",
+  "tags": [
+    {
+      "description": "Character operations",
+      "name": "characters"
+    },
+    {
+      "description": "User Profile operations",
+      "name": "user-profiles"
+    },
+    {
+      "description": "AI Model operations",
+      "name": "ai-models"
+    },
+    {
+      "description": "System Prompt operations",
+      "name": "system-prompts"
+    },
+    {
+      "description": "Chat Session operations",
+      "name": "chat-sessions"
+    },
+    {
+      "description": "Message operations",
+      "name": "messages"
+    },
+    {
+      "description": "Application settings operations",
+      "name": "settings"
+    }
+  ]
+}

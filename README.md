@@ -163,3 +163,12 @@ Additional documentation is available in the `documentation/` directory:
 - [Global Roadmap](documentation/global_roadmap.md)
 - [Testing Strategy](documentation/testing_strategy.md)
 - [Phase 3 Database Testing Roadmap](documentation/phase3_part2_database_testing_roadmap.md)
+
+### API Documentation
+
+- **API Documentation UI**: When the server is running, access the interactive Swagger UI at:
+  - http://localhost:5000/api/v1/docs
+
+- **OpenAPI Export**: Generate an OpenAPI specification file for frontend integration:
+  - [OpenAPI Export Usage Guide](documentation/api/openapi_usage.md) (includes instructions for generating client code)
+  - Use the script at `scripts/export_openapi.py` to export a specification file
