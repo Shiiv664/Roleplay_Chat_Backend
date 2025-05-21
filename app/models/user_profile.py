@@ -46,6 +46,17 @@ class UserProfile(Base, TimestampMixin):
         uselist=False,
     )
 
+    def get_avatar_url(self) -> str:
+        """Get the avatar URL for this user profile.
+
+        Returns:
+            str: The avatar URL or None if no avatar is set
+        """
+        from app.services.file_upload_service import FileUploadService
+
+        file_service = FileUploadService()
+        return file_service.get_avatar_url(self.avatar_image)
+
     def __repr__(self) -> str:
         """Return string representation of the user profile.
 
