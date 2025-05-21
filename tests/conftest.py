@@ -310,13 +310,38 @@ def app():
         Flask: Flask application configured for testing.
     """
     # Create a Flask app manually for testing
+    from pathlib import Path
+
     from flask import Flask, request
 
     from app.api import api_bp
+    from app.config import TestingConfig
 
     app = Flask(__name__)
-    app.config["TESTING"] = True
+    app.config.from_object(TestingConfig)
     app.config["SERVER_NAME"] = "localhost.localdomain"
+
+    # Initialize database with test configuration
+    from app.utils.db import init_db
+
+    init_db(app)
+
+    # Configure uploads directory for testing
+    UPLOAD_FOLDER = Path("test_uploads")
+    UPLOAD_FOLDER.mkdir(exist_ok=True)
+
+    @app.route("/uploads/<path:filename>")
+    def serve_uploads(filename):
+        """Serve uploaded files."""
+        from flask import send_from_directory
+
+        try:
+            return send_from_directory(str(UPLOAD_FOLDER), filename)
+        except FileNotFoundError:
+            return "File not found", 404
+        except Exception as e:
+            app.logger.error(f"Error serving uploaded file {filename}: {e}")
+            return "Internal server error", 500
 
     # Add is_debug property to request context (needed by error handlers)
     @app.before_request
@@ -326,19 +351,109 @@ def app():
     # Register the API blueprint
     app.register_blueprint(api_bp)
 
+    # Initialize error handlers
+    from app.utils.exceptions import (
+        BusinessRuleError,
+        DatabaseError,
+        ResourceNotFoundError,
+        ValidationError,
+    )
+
+    @app.errorhandler(ValidationError)
+    def handle_validation_error(e):
+        from flask import jsonify
+
+        response = {
+            "success": False,
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": str(e),
+                "details": getattr(e, "details", None),
+            },
+        }
+        return jsonify(response), 400
+
+    @app.errorhandler(ResourceNotFoundError)
+    def handle_not_found_error(e):
+        from flask import jsonify
+
+        response = {
+            "success": False,
+            "error": {
+                "code": "RESOURCE_NOT_FOUND",
+                "message": str(e),
+                "details": getattr(e, "details", None),
+            },
+        }
+        return jsonify(response), 404
+
+    @app.errorhandler(BusinessRuleError)
+    def handle_business_rule_error(e):
+        from flask import jsonify
+
+        response = {
+            "success": False,
+            "error": {
+                "code": "BUSINESS_RULE_ERROR",
+                "message": str(e),
+                "details": getattr(e, "details", None),
+            },
+        }
+        return jsonify(response), 400
+
+    @app.errorhandler(DatabaseError)
+    def handle_database_error(e):
+        from flask import jsonify
+
+        response = {
+            "success": False,
+            "error": {
+                "code": "DATABASE_ERROR",
+                "message": "A database error occurred",
+                "details": str(e) if app.debug else None,
+            },
+        }
+        return jsonify(response), 500
+
+    @app.errorhandler(Exception)
+    def handle_unexpected_error(e):
+        from flask import jsonify
+
+        response = {
+            "success": False,
+            "error": {
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": "An unexpected error occurred",
+                "details": str(e) if app.debug else None,
+            },
+        }
+        return jsonify(response), 500
+
     return app
 
 
 @pytest.fixture
-def client(app):
+def client(app, db_session):
     """Create a Flask test client.
 
     Args:
         app: Flask application fixture.
+        db_session: Database session fixture.
 
     Returns:
         FlaskClient: Flask test client for making requests.
     """
+    from unittest.mock import patch
+
     with app.test_client() as client:
         with app.app_context():
-            yield client
+            # Patch the database session factory to return our test session
+            with patch("app.utils.db.SessionLocal") as mock_session_local:
+                mock_session_local.return_value = db_session
+
+                # Also patch get_db_session and session_scope to use test session
+                with patch("app.utils.db.get_db_session") as mock_get_db_session:
+                    mock_get_db_session.return_value.__enter__ = lambda x: db_session
+                    mock_get_db_session.return_value.__exit__ = lambda x, *args: None
+
+                    yield client

@@ -79,6 +79,7 @@ instance/
 
 # User uploads
 uploads/
+test_uploads/
 
 # mypy
 .mypy_cache/
