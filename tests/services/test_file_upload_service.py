@@ -1,6 +1,5 @@
 """Tests for the file upload service."""
 
-import os
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock
@@ -152,7 +151,7 @@ class TestFileUploadService:
         invalid_path = self.temp_dir / "invalid.jpg"
         invalid_path.write_text("This is not an image")
 
-        with pytest.raises(Exception):
+        with pytest.raises((OSError, IOError)):
             self.service._process_image(invalid_path)
 
     def test_save_avatar_image_sync_success(self):
@@ -226,7 +225,7 @@ class TestFileUploadService:
     def test_get_avatar_url_local_path(self):
         """Test getting URL for local avatar path."""
         url = self.service.get_avatar_url("avatars/test.jpg")
-        assert url == "/static/avatars/test.jpg"
+        assert url == "/uploads/avatars/test.jpg"
 
     def test_get_avatar_url_external_url(self):
         """Test getting URL for external avatar URL."""
