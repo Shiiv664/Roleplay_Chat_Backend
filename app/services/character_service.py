@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 
 from app.models.character import Character
 from app.repositories.character_repository import CharacterRepository
+from app.services.file_upload_service import FileUploadService
 from app.utils.exceptions import BusinessRuleError, ValidationError
 
 logger = logging.getLogger(__name__)

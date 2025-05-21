@@ -1,8 +1,10 @@
 """Main application entry point."""
 
 import logging
+import os
+from pathlib import Path
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 
 from app.config import get_config
@@ -45,6 +47,21 @@ def create_app() -> Flask:
     from app.api import init_app as init_api
 
     init_api(app)
+
+    # Configure static file serving for uploads
+    UPLOAD_FOLDER = Path("uploads")
+    UPLOAD_FOLDER.mkdir(exist_ok=True)
+
+    @app.route("/uploads/<path:filename>")
+    def serve_uploads(filename):
+        """Serve uploaded files."""
+        try:
+            return send_from_directory(str(UPLOAD_FOLDER), filename)
+        except FileNotFoundError:
+            return "File not found", 404
+        except Exception as e:
+            app.logger.error(f"Error serving uploaded file {filename}: {e}")
+            return "Internal server error", 500
 
     # Global error handlers
     @app.errorhandler(ValidationError)

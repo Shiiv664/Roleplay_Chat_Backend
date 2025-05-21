@@ -61,7 +61,7 @@
     "CharacterCreate": {
       "properties": {
         "avatar_image": {
-          "description": "Character avatar image path",
+          "description": "Character avatar image URL (for JSON requests)",
           "type": "string"
         },
         "description": {
@@ -636,6 +636,7 @@
         ]
       },
       "post": {
+        "description": "## Request Formats:\n\n### 1. JSON (Content-Type: application/json)\nStandard character creation with avatar_image as URL string.\nUses the CharacterCreate schema.\n\n### 2. Multipart Form (Content-Type: multipart/form-data)  \nCharacter creation with file upload support:\n- **label**: string (required) - Unique character identifier\n- **name**: string (required) - Character display name\n- **description**: string (optional) - Character description\n- **avatar_image**: file (optional) - Image file (PNG, JPG, GIF, WebP, max 5MB, max 1024x1024px)\n\n## File Upload Details:\n- Supported formats: PNG, JPG, JPEG, GIF, WebP\n- Maximum file size: 5MB\n- Maximum dimensions: 1024x1024 pixels\n- Large images are automatically resized\n- Files are stored securely with UUID-generated names",
         "operationId": "create_character",
         "parameters": [
           {
@@ -645,6 +646,17 @@
             "schema": {
               "$ref": "#/definitions/CharacterCreate"
             }
+          },
+          {
+            "default": "application/json",
+            "description": "Content type of the request",
+            "enum": [
+              "application/json",
+              "multipart/form-data"
+            ],
+            "in": "header",
+            "name": "Content-Type",
+            "type": "string"
           },
           {
             "description": "An optional fields mask",
@@ -660,9 +672,18 @@
             "schema": {
               "$ref": "#/definitions/Response"
             }
+          },
+          "201": {
+            "description": "Character created successfully"
+          },
+          "400": {
+            "description": "Bad request - validation error or invalid file"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
-        "summary": "Create a new character",
+        "summary": "Create a new character with optional avatar image upload",
         "tags": [
           "characters"
         ]

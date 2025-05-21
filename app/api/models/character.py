@@ -22,6 +22,9 @@ character_model = Model(
         "avatar_image": fields.String(
             required=False, description="Character avatar image path"
         ),
+        "avatar_url": fields.String(
+            readOnly=True, description="Character avatar image URL"
+        ),
         "created_at": fields.DateTime(readOnly=True, description="Creation timestamp"),
         "updated_at": fields.DateTime(
             readOnly=True, description="Last update timestamp"
@@ -45,7 +48,30 @@ character_create_model = Model(
             required=False, description="Character description"
         ),
         "avatar_image": fields.String(
-            required=False, description="Character avatar image path"
+            required=False, description="Character avatar image URL (for JSON requests)"
+        ),
+    },
+)
+
+character_create_multipart_model = Model(
+    "CharacterCreateMultipart",
+    {
+        "label": fields.String(
+            required=True,
+            description="Unique character identifier",
+            min_length=1,
+            max_length=50,
+        ),
+        "name": fields.String(
+            required=True, description="Character name", min_length=1, max_length=100
+        ),
+        "description": fields.String(
+            required=False, description="Character description"
+        ),
+        "avatar_image": fields.Raw(
+            required=False,
+            description="Character avatar image file (PNG, JPG, GIF, WebP, max 5MB)",
+            type="file",
         ),
     },
 )

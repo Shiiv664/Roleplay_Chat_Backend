@@ -4,9 +4,11 @@ import logging
 
 from flask import request
 from flask_restx import Namespace, Resource
+from werkzeug.datastructures import FileStorage
 
 from app.api.models.character import (
     character_create_model,
+    character_create_multipart_model,
     character_list_model,
     character_model,
     character_update_model,
@@ -16,7 +18,9 @@ from app.api.namespaces import create_response, handle_exception
 from app.api.parsers.pagination import pagination_parser, search_parser
 from app.repositories.character_repository import CharacterRepository
 from app.services.character_service import CharacterService
+from app.services.file_upload_service import FileUploadError, FileUploadService
 from app.utils.db import get_db_session
+from app.utils.exceptions import ValidationError
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -24,9 +28,29 @@ logger = logging.getLogger(__name__)
 # Create namespace
 api = Namespace("characters", description="Character operations")
 
+
+def serialize_character(character):
+    """Serialize a character object with avatar URL."""
+    return {
+        "id": character.id,
+        "label": character.label,
+        "name": character.name,
+        "description": character.description,
+        "avatar_image": character.avatar_image,
+        "avatar_url": character.get_avatar_url(),
+        "created_at": (
+            character.created_at.isoformat() if character.created_at else None
+        ),
+        "updated_at": (
+            character.updated_at.isoformat() if character.updated_at else None
+        ),
+    }
+
+
 # Register models with namespace
 api.models[character_model.name] = character_model
 api.models[character_create_model.name] = character_create_model
+api.models[character_create_multipart_model.name] = character_create_multipart_model
 api.models[character_update_model.name] = character_update_model
 api.models[character_list_model.name] = character_list_model
 api.models[response_model.name] = response_model
@@ -58,7 +82,9 @@ class CharacterList(Resource):
                 # Apply manual pagination (in the future, implement service-level pagination)
                 start_idx = (page - 1) * page_size
                 end_idx = start_idx + page_size
-                paginated_characters = characters[start_idx:end_idx]
+                paginated_characters = [
+                    serialize_character(char) for char in characters[start_idx:end_idx]
+                ]
 
                 # Create pagination metadata
                 total_items = len(characters)
@@ -80,14 +106,85 @@ class CharacterList(Resource):
             logger.exception("Error listing characters")
             return handle_exception(e)
 
-    @api.doc("create_character")
-    @api.expect(character_create_model)
+    @api.doc(
+        "create_character",
+        responses={
+            201: "Character created successfully",
+            400: "Bad request - validation error or invalid file",
+            500: "Internal server error",
+        },
+        params={
+            "Content-Type": {
+                "in": "header",
+                "description": "Content type of the request",
+                "type": "string",
+                "enum": ["application/json", "multipart/form-data"],
+                "default": "application/json",
+            }
+        },
+    )
+    @api.expect(character_create_model, validate=False)
     @api.marshal_with(response_model)
     def post(self):
-        """Create a new character."""
+        """Create a new character with optional avatar image upload.
+
+        ## Request Formats:
+
+        ### 1. JSON (Content-Type: application/json)
+        Standard character creation with avatar_image as URL string.
+        Uses the CharacterCreate schema.
+
+        ### 2. Multipart Form (Content-Type: multipart/form-data)
+        Character creation with file upload support:
+        - **label**: string (required) - Unique character identifier
+        - **name**: string (required) - Character display name
+        - **description**: string (optional) - Character description
+        - **avatar_image**: file (optional) - Image file (PNG, JPG, GIF, WebP, max 5MB, max 1024x1024px)
+
+        ## File Upload Details:
+        - Supported formats: PNG, JPG, JPEG, GIF, WebP
+        - Maximum file size: 5MB
+        - Maximum dimensions: 1024x1024 pixels
+        - Large images are automatically resized
+        - Files are stored securely with UUID-generated names
+        - Uploaded files are accessible via `/uploads/avatars/{filename}` URLs
+        """
         try:
-            # Get request data
-            data = request.json
+            avatar_image_path = None
+
+            # Check if this is a multipart form request with file upload
+            if request.content_type and "multipart/form-data" in request.content_type:
+                # Extract form data
+                label = request.form.get("label")
+                name = request.form.get("name")
+                description = request.form.get("description")
+                avatar_file = request.files.get("avatar_image")
+
+                # Validate required fields
+                if not label or not name:
+                    raise ValidationError("Label and name are required")
+
+                # Handle file upload if provided
+                if avatar_file and avatar_file.filename:
+                    try:
+                        file_upload_service = FileUploadService()
+                        avatar_image_path = file_upload_service.save_avatar_image_sync(
+                            avatar_file
+                        )
+                    except FileUploadError as e:
+                        raise ValidationError(e.message)
+
+                data = {
+                    "label": label,
+                    "name": name,
+                    "description": description,
+                    "avatar_image": avatar_image_path,
+                }
+            else:
+                # Handle JSON request
+                data = request.json
+                if not data:
+                    raise ValidationError("Request body is required")
 
             # Create service and repository with session
             with get_db_session() as session:
@@ -105,7 +202,7 @@ class CharacterList(Resource):
                 # Commit the transaction
                 session.commit()
 
-                return create_response(data=character), 201
+                return create_response(data=serialize_character(character)), 201
 
         except Exception as e:
             logger.exception("Error creating character")
@@ -131,7 +228,7 @@ class CharacterItem(Resource):
                 # Get character
                 character = character_service.get_character(id)
 
-                return create_response(data=character)
+                return create_response(data=serialize_character(character))
 
         except Exception as e:
             logger.exception(f"Error getting character {id}")
@@ -163,7 +260,7 @@ class CharacterItem(Resource):
                 # Commit the transaction
                 session.commit()
 
-                return create_response(data=character)
+                return create_response(data=serialize_character(character))
 
         except Exception as e:
             logger.exception(f"Error updating character {id}")
@@ -213,9 +310,13 @@ class CharacterSearch(Resource):
 
                 # Search characters
                 characters = character_service.search_characters(query)
+                serialized_characters = [
+                    serialize_character(char) for char in characters
+                ]
 
                 return create_response(
-                    data=characters, meta={"query": query, "count": len(characters)}
+                    data=serialized_characters,
+                    meta={"query": query, "count": len(characters)},
                 )
 
         except Exception as e:

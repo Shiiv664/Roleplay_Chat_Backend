@@ -310,13 +310,18 @@ def app():
         Flask: Flask application configured for testing.
     """
     # Create a Flask app manually for testing
-    from flask import Flask
+    from flask import Flask, request
 
     from app.api import api_bp
 
     app = Flask(__name__)
     app.config["TESTING"] = True
     app.config["SERVER_NAME"] = "localhost.localdomain"
+
+    # Add is_debug property to request context (needed by error handlers)
+    @app.before_request
+    def before_request():
+        request.is_debug = app.debug
 
     # Register the API blueprint
     app.register_blueprint(api_bp)
