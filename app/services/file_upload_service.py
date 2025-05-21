@@ -1,7 +1,5 @@
 """File upload service for handling avatar images and other file uploads."""
 
-import mimetypes
-import os
 import uuid
 from pathlib import Path
 from typing import Optional
@@ -13,6 +11,8 @@ try:
 except ImportError:
     # For when FastAPI is not available
     class UploadFile:
+        """Placeholder UploadFile class when FastAPI is not available."""
+
         pass
 
 
@@ -20,6 +20,12 @@ class FileUploadError(Exception):
     """Custom exception for file upload errors."""
 
     def __init__(self, message: str, status_code: int = 400):
+        """Initialize FileUploadError with message and status code.
+
+        Args:
+            message: Error message describing the upload failure.
+            status_code: HTTP status code for the error. Defaults to 400.
+        """
         self.message = message
         self.status_code = status_code
         super().__init__(self.message)
@@ -27,9 +33,6 @@ class FileUploadError(Exception):
 
 class FileUploadService:
     """Service for handling file uploads with validation and processing."""
-
-    UPLOAD_DIR = Path("uploads")
-    AVATAR_DIR = UPLOAD_DIR / "avatars"
 
     ALLOWED_MIME_TYPES = {
         "image/jpeg",
@@ -43,8 +46,14 @@ class FileUploadService:
     MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
     MAX_IMAGE_DIMENSIONS = (1024, 1024)
 
-    def __init__(self):
-        """Initialize the file upload service and create necessary directories."""
+    def __init__(self, upload_dir: Optional[str] = None):
+        """Initialize the file upload service and create necessary directories.
+
+        Args:
+            upload_dir: Optional custom upload directory. Defaults to "uploads".
+        """
+        self.UPLOAD_DIR = Path(upload_dir) if upload_dir else Path("uploads")
+        self.AVATAR_DIR = self.UPLOAD_DIR / "avatars"
         self._ensure_directories_exist()
 
     def _ensure_directories_exist(self) -> None:
