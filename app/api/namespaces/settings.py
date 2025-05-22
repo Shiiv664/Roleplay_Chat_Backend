@@ -63,11 +63,14 @@ def error_response(status_code, message, error_code=None, details=None):
     return response, status_code
 
 
-def get_settings_service() -> ApplicationSettingsService:
+def get_settings_service(session) -> ApplicationSettingsService:
     """Create and return an ApplicationSettingsService instance.
 
     This is a factory function that creates a new ApplicationSettingsService
     with its required dependencies.
+
+    Args:
+        session: SQLAlchemy session to use for database operations
 
     Returns:
         ApplicationSettingsService: An initialized settings service
@@ -78,13 +81,11 @@ def get_settings_service() -> ApplicationSettingsService:
     )
     from app.repositories.system_prompt_repository import SystemPromptRepository
     from app.repositories.user_profile_repository import UserProfileRepository
-    from app.utils.db import get_session
 
-    db_session = get_session()
-    settings_repo = ApplicationSettingsRepository(db_session)
-    ai_model_repo = AIModelRepository(db_session)
-    system_prompt_repo = SystemPromptRepository(db_session)
-    user_profile_repo = UserProfileRepository(db_session)
+    settings_repo = ApplicationSettingsRepository(session)
+    ai_model_repo = AIModelRepository(session)
+    system_prompt_repo = SystemPromptRepository(session)
+    user_profile_repo = UserProfileRepository(session)
 
     return ApplicationSettingsService(
         settings_repo, ai_model_repo, system_prompt_repo, user_profile_repo
@@ -146,14 +147,17 @@ class ApplicationSettingsResource(Resource):
         Returns:
             The application settings data
         """
-        try:
-            settings_service = get_settings_service()
-            settings = settings_service.get_settings()
+        from app.utils.db import session_scope
 
-            return {
-                "success": True,
-                "data": format_settings_response(settings),
-            }
+        try:
+            with session_scope() as session:
+                settings_service = get_settings_service(session)
+                settings = settings_service.get_settings()
+
+                return {
+                    "success": True,
+                    "data": format_settings_response(settings),
+                }
         except DatabaseError as e:
             logger.error(f"Database error: {e}")
             return error_response(500, "Database error occurred", "DATABASE_ERROR")
@@ -169,34 +173,38 @@ class ApplicationSettingsResource(Resource):
         Returns:
             The updated application settings data
         """
+        from app.utils.db import session_scope
+
         try:
             data = request.json or {}
-            settings_service = get_settings_service()
 
-            # Extract the fields to update
-            default_ai_model_id = data.get("default_ai_model_id")
-            default_system_prompt_id = data.get("default_system_prompt_id")
-            default_user_profile_id = data.get("default_user_profile_id")
-            default_avatar_image = data.get("default_avatar_image")
+            with session_scope() as session:
+                settings_service = get_settings_service(session)
 
-            # Only include fields that were actually provided in the request
-            update_kwargs = {}
-            if "default_ai_model_id" in data:
-                update_kwargs["default_ai_model_id"] = default_ai_model_id
-            if "default_system_prompt_id" in data:
-                update_kwargs["default_system_prompt_id"] = default_system_prompt_id
-            if "default_user_profile_id" in data:
-                update_kwargs["default_user_profile_id"] = default_user_profile_id
-            if "default_avatar_image" in data:
-                update_kwargs["default_avatar_image"] = default_avatar_image
+                # Extract the fields to update
+                default_ai_model_id = data.get("default_ai_model_id")
+                default_system_prompt_id = data.get("default_system_prompt_id")
+                default_user_profile_id = data.get("default_user_profile_id")
+                default_avatar_image = data.get("default_avatar_image")
 
-            # Update the settings with provided values
-            updated_settings = settings_service.update_settings(**update_kwargs)
+                # Only include fields that were actually provided in the request
+                update_kwargs = {}
+                if "default_ai_model_id" in data:
+                    update_kwargs["default_ai_model_id"] = default_ai_model_id
+                if "default_system_prompt_id" in data:
+                    update_kwargs["default_system_prompt_id"] = default_system_prompt_id
+                if "default_user_profile_id" in data:
+                    update_kwargs["default_user_profile_id"] = default_user_profile_id
+                if "default_avatar_image" in data:
+                    update_kwargs["default_avatar_image"] = default_avatar_image
 
-            return {
-                "success": True,
-                "data": format_settings_response(updated_settings),
-            }
+                # Update the settings with provided values
+                updated_settings = settings_service.update_settings(**update_kwargs)
+
+                return {
+                    "success": True,
+                    "data": format_settings_response(updated_settings),
+                }
         except ValidationError as e:
             return error_response(400, e.message, "VALIDATION_ERROR", e.details)
         except ResourceNotFoundError as e:
@@ -218,23 +226,26 @@ class ResetSettingsResource(Resource):
         Returns:
             Success message and reset settings
         """
-        try:
-            settings_service = get_settings_service()
-            reset_settings = settings_service.reset_settings()
+        from app.utils.db import session_scope
 
-            return {
-                "success": True,
-                "data": {
-                    "message": "Application settings reset to defaults",
-                    "settings": {
-                        "id": reset_settings.id,
-                        "default_ai_model_id": reset_settings.default_ai_model_id,
-                        "default_system_prompt_id": reset_settings.default_system_prompt_id,
-                        "default_user_profile_id": reset_settings.default_user_profile_id,
-                        "default_avatar_image": reset_settings.default_avatar_image,
+        try:
+            with session_scope() as session:
+                settings_service = get_settings_service(session)
+                reset_settings = settings_service.reset_settings()
+
+                return {
+                    "success": True,
+                    "data": {
+                        "message": "Application settings reset to defaults",
+                        "settings": {
+                            "id": reset_settings.id,
+                            "default_ai_model_id": reset_settings.default_ai_model_id,
+                            "default_system_prompt_id": reset_settings.default_system_prompt_id,
+                            "default_user_profile_id": reset_settings.default_user_profile_id,
+                            "default_avatar_image": reset_settings.default_avatar_image,
+                        },
                     },
-                },
-            }
+                }
         except DatabaseError as e:
             logger.error(f"Database error: {e}")
             return error_response(500, "Database error occurred", "DATABASE_ERROR")

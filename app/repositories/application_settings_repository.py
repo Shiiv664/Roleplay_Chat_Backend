@@ -79,7 +79,7 @@ class ApplicationSettingsRepository(BaseRepository[ApplicationSettings]):
                 if hasattr(settings, key):
                     setattr(settings, key, value)
 
-            self.session.flush()
+            self.session.commit()
 
             # Invalidate cache
             self._cached_get_settings.cache_clear()
