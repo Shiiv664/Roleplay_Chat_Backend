@@ -145,6 +145,109 @@ Implement real-time AI message generation using OpenRouter API with streaming ca
 - **UX**: Clear indicators for streaming state and progress
 - **Cancellation**: Future endpoint for stopping mid-stream (Phase 8)
 
+## Part 2: Stream Cancellation Implementation
+
+### Phase 8: Stream Cancellation Infrastructure
+
+### 8.1 Cancellation API Endpoint
+- Create `cancelStreamingMessage` endpoint in messages namespace
+- Parameters: `chatSessionId`
+- Validate active stream existence
+- Return cancellation status
+
+### 8.2 OpenRouter Stream Cancellation
+- Implement stream abortion in OpenRouter client
+- Use connection.close() or cancel_event.set() pattern from OpenRouter docs
+- Handle graceful vs forced cancellation scenarios
+- Ensure proper cleanup of OpenRouter connection resources
+
+### 8.3 SSE Client Disconnection
+- Broadcast cancellation event to all active SSE connections for the session
+- Send final SSE event: `data: {"type": "cancelled", "reason": "user_cancelled"}`
+- Close all SSE connections for the chat session
+- Clean up connection registry and stream state
+
+### 8.4 Partial Message Handling
+- User sees partial response in real-time through SSE (no special database handling needed)
+- Partial content remains visible in chat interface until cancellation completes
+
+### 8.5 Stream State Cleanup
+- Remove session from active streams registry
+- Clear accumulated message content from memory/Redis
+- Reset session streaming locks to allow new messages
+- Update session status to allow new message sending
+
+### 8.6 Error Handling for Cancellation
+- Handle scenarios where OpenRouter stream already completed
+- Manage race conditions between completion and cancellation
+- Provide appropriate error messages for invalid cancellation attempts
+- Handle network failures during cancellation process
+
+### 8.7 Backend Cancellation Response
+- Return appropriate HTTP status codes for cancellation requests
+- Provide cancellation confirmation in API response
+- Handle cancellation error cases and return meaningful messages
+
+### Phase 9: Advanced Cancellation Features
+
+### 9.1 Auto-Cancellation Scenarios
+- Timeout-based cancellation (e.g., after 5 minutes of streaming)
+- Connection loss cancellation (when all SSE clients disconnect)
+- System maintenance cancellation with graceful notifications
+
+### 9.2 Cancellation Analytics
+- Track cancellation rates and reasons
+- Monitor partial message lengths and user behavior
+- Identify patterns for UX improvements
+
+## Frontend Implementation Guide
+
+### Client-Side Streaming Implementation
+
+#### SSE Connection Management
+- Use EventSource API to connect to `/api/chat/{session_id}/stream`
+- Handle connection states: connecting, open, closed, error
+- Implement automatic reconnection on connection drops
+- Support multiple tabs with same chat session
+
+#### Message Display
+- Stream incoming chunks and append to message display
+- Show typing/streaming indicators while receiving data
+- Handle message completion and transition to static display
+- Display partial messages during streaming
+
+#### Streaming Controls
+- Add cancel button during active streaming
+- Call `cancelStreamingMessage` endpoint when user cancels
+- Disable message input during streaming
+- Show streaming status and progress indicators
+
+#### Error Handling
+- Handle SSE connection errors gracefully
+- Show user-friendly error messages for API failures
+- Implement retry logic for failed connections
+- Handle stream cancellation confirmations
+
+#### Page Refresh Recovery
+- Check for active streams on page load
+- Reconnect to ongoing streams automatically
+- Display accumulated content from server state
+- Seamless continuation of interrupted streams
+
+### Client-Side Cancellation UI
+- Add cancel button to streaming message interface
+- Disable button after cancellation initiated
+- Show cancellation progress/confirmation
+- Handle cancellation success/error responses
+- Update UI state after successful cancellation
+
+### UX Considerations
+- Clear visual indicators for streaming vs completed messages
+- Smooth scrolling as content arrives
+- Proper loading states and feedback
+- Accessibility support for screen readers
+- Mobile-responsive streaming interface
+
 ## Dependencies to Review
 - Current message service structure
 - Database transaction handling
