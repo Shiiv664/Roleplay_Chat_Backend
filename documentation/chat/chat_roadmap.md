@@ -12,23 +12,37 @@ Implement real-time AI message generation using OpenRouter API with streaming ca
 - Add configuration management for API settings
 
 ### 1.2 Dependencies & Configuration
-- Add required packages: `requests`, `asyncio` support
-- Update configuration for OpenRouter API key handling
+- Add required packages: `requests`, `asyncio` support, `cryptography`
+- Create encryption service using `cryptography.fernet`
+- Add OpenRouter API key to ApplicationSettings (encrypted storage)
 - Add streaming-specific settings (timeouts, buffer sizes)
+- Environment variable for encryption key: `ENCRYPTION_KEY`
+
+### 1.3 Encryption Service Implementation
+- Create `app/utils/encryption.py` with EncryptionService class
+- Implement `encrypt_api_key()` and `decrypt_api_key()` methods
+- Use Fernet symmetric encryption for API key protection
+- Generate and document encryption key setup process
 
 ## Phase 2: Message Generation Service
 
-### 2.1 System Prompt Construction
+### 2.1 OpenRouter API Key Management
+- Update ApplicationSettingsService to handle encrypted API key storage
+- Implement `set_openrouter_api_key()` with encryption
+- Implement `get_openrouter_api_key()` with decryption
+- Add API key validation and error handling
+
+### 2.2 System Prompt Construction
 - Implement prompt builder in message service
-- Handle concatenation: `preSystemPrompt + separator + systemPrompt + separator + character_description + separator + userProfile_description + separator + postSystemPrompt`
+- Handle concatenation: `preSystemPrompt + separator + systemPrompt + separator + character_description + separator + userProfile_description`
 - Use separator: `\n---\n`
 
-### 2.2 Message History Processing
+### 2.3 Message History Processing
 - Fetch complete chat session message history
 - Format messages for OpenRouter API (role + content)
-- Combine system prompt + history + new user message
+- Combine system prompt + history + postSystemPrompt + new user message
 
-### 2.3 Streaming Message Generation
+### 2.4 Streaming Message Generation
 - Implement streaming OpenRouter API call
 - Handle Server-Sent Events (SSE) parsing
 - Process streaming chunks and accumulate response
@@ -43,10 +57,11 @@ Implement real-time AI message generation using OpenRouter API with streaming ca
 
 ### 3.2 Request Flow
 1. Save user message to database with role "user"
-2. Build complete prompt context
-3. Initiate streaming OpenRouter API call
-4. Stream response to client
-5. Save complete AI response with role "assistant"
+2. Build system prompt (preSystemPrompt + systemPrompt + character_description + userProfile_description)
+3. Fetch message history and add postSystemPrompt before new user message
+4. Initiate streaming OpenRouter API call
+5. Stream response to client
+6. Save complete AI response with role "assistant"
 
 ### 3.3 Concurrency Control
 - Implement session-level locking during streaming
@@ -55,15 +70,29 @@ Implement real-time AI message generation using OpenRouter API with streaming ca
 
 ## Phase 4: Response Streaming
 
-### 4.1 Streaming Implementation Options
-**Option A**: WebSocket connection for real-time streaming
-**Option B**: Server-Sent Events (SSE) endpoint
-**Option C**: Long polling with chunked responses
+### 4.1 Server-Sent Events (SSE) Implementation
+- Create SSE endpoint: `/api/chat/{session_id}/stream`
+- Implement `text/event-stream` response format
+- Use EventSource API on client side
 
-### 4.2 Client Communication
-- Design streaming response format
-- Handle connection errors and reconnection
-- Implement proper cleanup on completion/cancellation
+### 4.2 Stream State Management
+- Track active streams per chat session in memory/Redis
+- Store: `{chatSessionId: {isStreaming: true, partialMessage: "...", streamId: "uuid"}}`
+- Accumulate message content as it streams from OpenRouter
+- Handle stream lifecycle (start, progress, completion, cancellation)
+
+### 4.3 Multiple Connection Support
+- Allow multiple SSE connections per chat session
+- Support concurrent tabs/devices for same user
+- Broadcast streaming chunks to all active connections
+- Connection management: register/unregister, heartbeat detection
+- Resource limits: max connections per session, cleanup dead connections
+
+### 4.4 Reconnection & Recovery
+- On client reconnect: check for active streams
+- Send accumulated content so far, then continue streaming
+- Handle page refresh/browser close gracefully
+- Timeout inactive streams (e.g., 5 minutes without active connections)
 
 ## Phase 5: Error Handling & Edge Cases
 
@@ -110,7 +139,8 @@ Implement real-time AI message generation using OpenRouter API with streaming ca
 ## Implementation Notes
 
 - **Modularity**: OpenRouter implementation should be easily replaceable with other providers (Anthropic, OpenAI)
-- **Security**: API keys should be server-side only, properly encrypted
+- **Security**: API keys encrypted using Fernet, encryption key in environment variable
+- **API Key Storage**: Stored in ApplicationSettings table (encrypted), managed via settings API
 - **Scalability**: Consider connection limits and resource usage
 - **UX**: Clear indicators for streaming state and progress
 - **Cancellation**: Future endpoint for stopping mid-stream (Phase 8)
