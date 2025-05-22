@@ -1,7 +1,7 @@
 # Phase 2: Message Generation Service - Detailed Implementation Guide
 
 ## Overview
-Phase 2 implements the core logic for generating AI responses using OpenRouter's streaming API. The key principle is that when a user sends a message via the `addUserMessageStreamingMode` endpoint, we use the chat session's configuration to determine all necessary components for the AI response.
+Phase 2 implements the core logic for generating AI responses using OpenRouter's streaming API. The key principle is that when a user sends a message via the `sendMessage` endpoint with `stream: true`, we use the chat session's configuration to determine all necessary components for the AI response.
 
 ## Key Components from Chat Session
 
@@ -38,9 +38,9 @@ def build_system_prompt(self, chat_session: ChatSession) -> str:
         ---
         [system_prompt.content]
         ---
-        [character.name and character.description]
+        [character.description]
         ---
-        [user_profile.name and user_profile.description]
+        [user_profile.description]
     """
 ```
 
@@ -49,12 +49,10 @@ def build_system_prompt(self, chat_session: ChatSession) -> str:
 2. **System prompt**: `chat_session.system_prompt.content`
 3. **Character section**: Format as needed, e.g.:
    ```
-   Character: {chat_session.character.name}
    {chat_session.character.description if chat_session.character.description else "No description provided"}
    ```
 4. **User profile section**: Format as needed, e.g.:
    ```
-   User: {chat_session.user_profile.name}
    {chat_session.user_profile.description if chat_session.user_profile.description else "No description provided"}
    ```
 
@@ -69,11 +67,9 @@ Use `\n---\n` between major sections
 ---
 You are an AI assistant playing a role in a collaborative storytelling experience.
 ---
-Character: Alice the Adventurer
-A brave explorer who loves discovering ancient ruins and solving mysteries. She's witty, resourceful, and always ready for the next adventure.
+Character is Alice the Adventurer. A brave explorer who loves discovering ancient ruins and solving mysteries. She's witty, resourceful, and always ready for the next adventure.
 ---
-User: John
-A curious individual who enjoys fantasy stories and creative writing.
+User is John. A curious individual who enjoys fantasy stories and creative writing.
 ```
 
 ## 2.3 Message History Processing
@@ -169,20 +165,62 @@ ai_message = Message(
 self.message_repository.create(ai_message)
 ```
 
-## 2.5 Main Endpoint Flow
+## 2.5 Endpoint Design
 
-When `addUserMessageStreamingMode(chatSessionId, message)` is called:
+### Endpoint Definition
+**Route**: `/api/chat-sessions/<int:chat_session_id>/send-message`
+**Method**: `POST`
+**Name**: `sendMessage`
 
-1. **Save user message**:
+### Request Body
+```json
+{
+    "content": "string (required) - The message content from the user",
+    "stream": "boolean (optional, default: true) - Whether to stream the response"
+}
+```
+
+### Response Format (Streaming Mode)
+When `stream: true`, the endpoint returns:
+- Status: `200 OK`
+- Headers: `Content-Type: text/event-stream`
+- Body: Server-Sent Events stream
+
+### Response Format (Non-Streaming Mode - Future)
+When `stream: false`, the endpoint would return:
+```json
+{
+    "success": true,
+    "data": {
+        "userMessage": { /* message object */ },
+        "aiResponse": { /* message object */ }
+    }
+}
+```
+
+## 2.6 Main Endpoint Flow
+
+When `sendMessage(chatSessionId, {content, stream})` is called:
+
+1. **Validate request**:
+   ```python
+   content = request.json.get("content")
+   stream = request.json.get("stream", True)  # Default to streaming
+
+   if not content:
+       raise ValidationError("Message content is required")
+   ```
+
+2. **Save user message**:
    ```python
    user_message = message_service.create_message(
        chat_session_id=chatSessionId,
        role="user",
-       content=message
+       content=content
    )
    ```
 
-2. **Get chat session with all relationships**:
+3. **Get chat session with all relationships**:
    ```python
    chat_session = chat_session_service.get_by_id(
        chatSessionId,
@@ -190,14 +228,23 @@ When `addUserMessageStreamingMode(chatSessionId, message)` is called:
    )
    ```
 
-3. **Generate streaming response**:
+4. **Handle based on streaming mode**:
    ```python
-   async for chunk in message_service.generate_streaming_response(
-       chat_session_id=chatSessionId,
-       user_message=message,
-       user_message_id=user_message.id
-   ):
-       yield chunk  # Stream to client via SSE
+   if stream:
+       # Return SSE response
+       return Response(
+           stream_with_context(
+               message_service.generate_streaming_response(
+                   chat_session_id=chatSessionId,
+                   user_message=content,
+                   user_message_id=user_message.id
+               )
+           ),
+           mimetype="text/event-stream"
+       )
+   else:
+       # Non-streaming mode - not implemented yet
+       raise NotImplementedError("Non-streaming mode not yet implemented")
    ```
 
 ## Error Handling
@@ -230,13 +277,276 @@ When `addUserMessageStreamingMode(chatSessionId, message)` is called:
 2. Test error scenarios (missing API key, invalid session, etc.)
 3. Test with different prompt configurations (pre/post prompts enabled/disabled)
 
+## API Models Required
+
+### Request Models
+Create in `app/api/models/message.py`:
+```python
+# Request model for sending messages
+send_message_model = Model(
+    'SendMessage',
+    {
+        'content': fields.String(
+            required=True,
+            description='The message content to send',
+            example='Hello, can you help me understand quantum physics?'
+        ),
+        'stream': fields.Boolean(
+            required=False,
+            default=True,
+            description='Whether to stream the AI response. If true, returns SSE stream. If false, returns complete response (not implemented yet).',
+            example=True
+        )
+    }
+)
+
+# Response model for streaming events
+stream_event_model = Model(
+    'StreamEvent',
+    {
+        'type': fields.String(
+            required=True,
+            description='Event type',
+            enum=['content', 'error', 'done'],
+            example='content'
+        ),
+        'data': fields.String(
+            required=False,
+            description='Event data (chunk of response text for content events)',
+            example='Quantum physics is'
+        ),
+        'error': fields.String(
+            required=False,
+            description='Error message (only for error events)',
+            example='OpenRouter API rate limit exceeded'
+        )
+    }
+)
+
+# Response model for non-streaming mode (future)
+send_message_response_model = Model(
+    'SendMessageResponse',
+    {
+        'user_message': fields.Nested(message_model, description='The created user message'),
+        'ai_response': fields.Nested(message_model, description='The generated AI response')
+    }
+)
+
+# Error response model
+send_message_error_model = Model(
+    'SendMessageError',
+    {
+        'success': fields.Boolean(default=False, description='Always false for errors'),
+        'error': fields.String(description='Error type', example='VALIDATION_ERROR'),
+        'message': fields.String(description='Human-readable error message', example='Message content is required'),
+        'details': fields.Raw(description='Additional error details', required=False)
+    }
+)
+```
+
+## Endpoint Implementation
+
+### SendMessage Endpoint
+Create in `app/api/namespaces/messages.py`:
+
+```python
+@api.route("/chat-sessions/<int:chat_session_id>/send-message")
+@api.param("chat_session_id", "The chat session identifier")
+class SendMessageResource(Resource):
+    """Send a message to the chat session and get AI response."""
+
+    @api.doc("send_message",
+        description="Send a user message and receive an AI-generated response. "
+                    "Supports both streaming (SSE) and non-streaming modes.")
+    @api.expect(send_message_model)
+    @api.response(200, "Success (streaming mode returns SSE stream)")
+    @api.response(201, "Success (non-streaming mode)", send_message_response_model)
+    @api.response(400, "Validation error", send_message_error_model)
+    @api.response(404, "Chat session not found", send_message_error_model)
+    @api.response(500, "Internal server error", send_message_error_model)
+    @api.response(503, "OpenRouter service unavailable", send_message_error_model)
+    @api.produces(['text/event-stream', 'application/json'])
+    def post(self, chat_session_id: int):
+        """Send a message and get AI response.
+
+        When stream=true (default):
+        - Returns Server-Sent Events stream
+        - Content-Type: text/event-stream
+        - Events format:
+          - data: {"type": "content", "data": "chunk of text"}
+          - data: {"type": "done"}
+          - data: {"type": "error", "error": "error message"}
+
+        When stream=false:
+        - Returns JSON with both messages
+        - Content-Type: application/json
+
+        Note: Non-streaming mode is not implemented yet.
+        """
+        # Implementation here
+```
+
+### CancelMessage Endpoint (Phase 8)
+Create in `app/api/namespaces/messages.py`:
+
+```python
+@api.route("/chat-sessions/<int:chat_session_id>/cancel-message")
+@api.param("chat_session_id", "The chat session identifier")
+class CancelMessageResource(Resource):
+    """Cancel an ongoing message stream."""
+
+    @api.doc("cancel_message",
+        description="Cancel an active AI message generation stream. "
+                    "Only works if there's an active stream for the session.")
+    @api.response(200, "Cancellation successful", response_model)
+    @api.response(400, "No active stream to cancel", send_message_error_model)
+    @api.response(404, "Chat session not found", send_message_error_model)
+    def post(self, chat_session_id: int):
+        """Cancel active message stream.
+
+        Returns:
+        - 200: Stream cancelled successfully
+        - 400: No active stream for this session
+        - 404: Chat session doesn't exist
+        """
+        # Implementation here
+```
+
+### Stream Event Format Documentation
+```
+## Server-Sent Events Format
+
+Each event is sent as:
+data: <JSON object>\n\n
+
+Event types:
+1. Content chunk: {"type": "content", "data": "partial response text"}
+2. Completion: {"type": "done"}
+3. Error: {"type": "error", "error": "error description"}
+4. Cancelled: {"type": "cancelled", "reason": "user_cancelled"}
+
+Example stream:
+data: {"type": "content", "data": "Quantum physics is a"}\n\n
+data: {"type": "content", "data": " fundamental theory in"}\n\n
+data: {"type": "content", "data": " physics that describes"}\n\n
+data: {"type": "done"}\n\n
+
+Example cancelled stream:
+data: {"type": "content", "data": "Quantum physics is a"}\n\n
+data: {"type": "cancelled", "reason": "user_cancelled"}\n\n
+```
+
+## Frontend Integration Examples
+
+### Using the SendMessage Endpoint
+
+#### JavaScript/TypeScript Example (Streaming)
+```typescript
+// Streaming mode (default)
+const response = await fetch('/api/chat-sessions/123/send-message', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+        content: 'Hello, how are you?',
+        stream: true  // optional, defaults to true
+    })
+});
+
+// Handle SSE stream
+const reader = response.body.getReader();
+const decoder = new TextDecoder();
+
+while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const chunk = decoder.decode(value);
+    const lines = chunk.split('\n');
+
+    for (const line of lines) {
+        if (line.startsWith('data: ')) {
+            const event = JSON.parse(line.slice(6));
+
+            switch (event.type) {
+                case 'content':
+                    // Append to message display
+                    appendToMessage(event.data);
+                    break;
+                case 'done':
+                    // Message complete
+                    onMessageComplete();
+                    break;
+                case 'error':
+                    // Handle error
+                    onError(event.error);
+                    break;
+            }
+        }
+    }
+}
+```
+
+#### Using EventSource API (Recommended for SSE)
+```typescript
+const eventSource = new EventSource('/api/chat-sessions/123/stream');
+
+eventSource.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+
+    switch (data.type) {
+        case 'content':
+            appendToMessage(data.data);
+            break;
+        case 'done':
+            eventSource.close();
+            onMessageComplete();
+            break;
+        case 'error':
+            eventSource.close();
+            onError(data.error);
+            break;
+    }
+};
+
+eventSource.onerror = (error) => {
+    console.error('SSE Error:', error);
+    eventSource.close();
+};
+
+// Send message to trigger streaming
+await fetch('/api/chat-sessions/123/send-message', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: 'Hello!' })
+});
+```
+
+### Cancelling a Stream
+```typescript
+// Cancel ongoing stream
+const cancelResponse = await fetch('/api/chat-sessions/123/cancel-message', {
+    method: 'POST'
+});
+
+if (cancelResponse.ok) {
+    console.log('Stream cancelled successfully');
+}
+```
+
 ## Implementation Checklist
 
+- [ ] Create all API models (send_message_model, stream_event_model, etc.)
 - [ ] Implement `build_system_prompt()` in MessageService
 - [ ] Implement `format_messages_for_openrouter()` in MessageService
 - [ ] Implement `generate_streaming_response()` in MessageService
 - [ ] Add method to save AI messages after streaming
 - [ ] Add method to get chat session with all relationships loaded
+- [ ] Create `sendMessage` endpoint with full OpenAPI documentation
+- [ ] Create `cancelMessage` endpoint with full OpenAPI documentation
+- [ ] Add SSE formatter utility function
 - [ ] Create comprehensive unit tests
 - [ ] Create integration tests
-- [ ] Update API documentation
+- [ ] Update OpenAPI JSON export
+- [ ] Add CORS headers for SSE support

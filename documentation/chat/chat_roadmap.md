@@ -50,18 +50,25 @@ Implement real-time AI message generation using OpenRouter API with streaming ca
 
 ## Phase 3: API Endpoint Implementation
 
-### 3.1 New Streaming Endpoint
-- Create `addUserMessageStreamingMode` endpoint in messages namespace
-- Parameters: `chatSessionId`, `message`
+### 3.1 New Message Sending Endpoint
+- Create `sendMessage` endpoint in messages namespace
+- Route: `/api/chat-sessions/<int:chat_session_id>/send-message`
+- Method: POST
+- Request body: `{"content": string, "stream": boolean (optional, default: true)}`
 - Input validation and session existence checks
 
 ### 3.2 Request Flow
-1. Save user message to database with role "user"
-2. Build system prompt (preSystemPrompt + systemPrompt + character_description + userProfile_description)
-3. Fetch message history and add postSystemPrompt before new user message
-4. Initiate streaming OpenRouter API call
-5. Stream response to client
-6. Save complete AI response with role "assistant"
+1. Validate request parameters (content required, stream defaults to true)
+2. Save user message to database with role "user"
+3. Build system prompt (preSystemPrompt + systemPrompt + character_description + userProfile_description)
+4. Fetch message history and add postSystemPrompt before new user message
+5. If streaming:
+   - Return SSE response with text/event-stream content type
+   - Stream AI response chunks to client as they arrive
+6. If not streaming (future implementation):
+   - Generate complete response
+   - Return JSON with both messages
+7. Save complete AI response with role "assistant"
 
 ### 3.3 Concurrency Control
 - Implement session-level locking during streaming
@@ -150,8 +157,9 @@ Implement real-time AI message generation using OpenRouter API with streaming ca
 ### Phase 8: Stream Cancellation Infrastructure
 
 ### 8.1 Cancellation API Endpoint
-- Create `cancelStreamingMessage` endpoint in messages namespace
-- Parameters: `chatSessionId`
+- Create `cancelMessage` endpoint in messages namespace
+- Route: `/api/chat-sessions/<int:chat_session_id>/cancel-message`
+- Method: POST
 - Validate active stream existence
 - Return cancellation status
 
@@ -218,7 +226,7 @@ Implement real-time AI message generation using OpenRouter API with streaming ca
 
 #### Streaming Controls
 - Add cancel button during active streaming
-- Call `cancelStreamingMessage` endpoint when user cancels
+- Call `cancelMessage` endpoint when user cancels
 - Disable message input during streaming
 - Show streaming status and progress indicators
 
