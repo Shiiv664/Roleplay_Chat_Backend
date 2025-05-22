@@ -269,10 +269,11 @@ class TestCharactersAPI:
         assert data["data"]["id"] == sample_character.id
         assert "deleted" in data["data"]["message"].lower()
 
-        # Verify service was called with correct ID
-        mock_character_service.delete_character.assert_called_once_with(
-            sample_character.id
-        )
+        # Verify service was called with correct ID and chat session service
+        call_args = mock_character_service.delete_character.call_args
+        assert call_args[0][0] == sample_character.id  # First argument is character ID
+        assert call_args[0][1] is not None  # Second argument is chat session service
+        mock_character_service.delete_character.assert_called_once()
 
     def test_delete_character_not_found(self, client, mock_character_service):
         """Test deleting a non-existent character."""

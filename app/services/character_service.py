@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 from app.models.character import Character
 from app.repositories.character_repository import CharacterRepository
 from app.services.file_upload_service import FileUploadService
-from app.utils.exceptions import BusinessRuleError, ValidationError
+from app.utils.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -187,31 +187,37 @@ class CharacterService:
         logger.info(f"Updating character with ID {character_id}")
         return self.repository.update(character_id, **update_data)
 
-    def delete_character(self, character_id: int) -> None:
-        """Delete a character.
+    def delete_character(self, character_id: int, chat_session_service=None) -> None:
+        """Delete a character and all its associated chat sessions.
 
         Args:
             character_id: ID of the character to delete
+            chat_session_service: Optional chat session service for deleting sessions
 
         Raises:
             ResourceNotFoundError: If character with the given ID is not found
-            BusinessRuleError: If the character cannot be deleted due to constraints
             DatabaseError: If a database error occurs
         """
         # Get current character to ensure it exists
         character = self.repository.get_by_id(character_id)
 
-        # Check if there are any chat sessions with this character
-        # We can check the relationship if it's loaded, otherwise this would
-        # be checked by the database constraint
-        if hasattr(character, "chat_sessions"):
-            # For SQLAlchemy dynamic relationships, we need to call count()
-            chat_sessions_count = character.chat_sessions.count()
-
-            if chat_sessions_count > 0:
-                raise BusinessRuleError(
-                    "Cannot delete character that is used in chat sessions",
-                    details={"character_id": character_id},
+        # Delete all chat sessions associated with this character
+        if chat_session_service:
+            try:
+                chat_sessions = chat_session_service.get_sessions_by_character(
+                    character_id
+                )
+                for session in chat_sessions:
+                    logger.info(
+                        f"Deleting chat session {session.id} for character {character_id}"
+                    )
+                    chat_session_service.delete_session(session.id)
+                logger.info(
+                    f"Deleted {len(chat_sessions)} chat sessions for character {character_id}"
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Error deleting chat sessions for character {character_id}: {e}"
                 )
 
         # Delete avatar file if it exists

@@ -6,10 +6,7 @@ import pytest
 
 from app.models.character import Character
 from app.services.character_service import CharacterService
-from app.utils.exceptions import (
-    BusinessRuleError,
-    ValidationError,
-)
+from app.utils.exceptions import ValidationError
 
 
 class TestCharacterService:
@@ -367,27 +364,45 @@ class TestCharacterService:
         mock_repository.delete.assert_called_once_with(1)
         mock_file_service_instance.delete_avatar_image.assert_not_called()
 
-    def test_delete_character_with_sessions(
+    def test_delete_character_without_chat_session_service(
         self, service, mock_repository, sample_character, mocker
     ):
-        """Test cannot delete character that is used in chat sessions."""
+        """Test deleting character without chat session service (backward compatibility)."""
         # Setup
         mock_repository.get_by_id.return_value = sample_character
 
-        # Patch the count method to return non-zero
-        # This approach works because we patch the AppenderQuery.count method itself
-        mock_count = mocker.patch(
-            "sqlalchemy.orm.dynamic.AppenderQuery.count", return_value=2
-        )
+        # Mock file service
+        mocker.patch("app.services.character_service.FileUploadService")
 
-        # Execute & Verify
-        with pytest.raises(BusinessRuleError) as excinfo:
-            service.delete_character(1)
+        # Execute - should work even without chat session service (old behavior)
+        service.delete_character(1)
 
-        # Verify the count method was called
-        mock_count.assert_called_once()
+        # Verify character was deleted
+        mock_repository.delete.assert_called_once_with(1)
 
-        assert "Cannot delete character that is used in chat sessions" in str(
-            excinfo.value
-        )
-        mock_repository.delete.assert_not_called()
+    def test_delete_character_with_chat_session_service(
+        self, service, mock_repository, sample_character, mocker
+    ):
+        """Test deleting character with chat session service deletes related sessions."""
+        # Setup
+        mock_repository.get_by_id.return_value = sample_character
+
+        # Mock chat session service
+        mock_chat_service = mocker.MagicMock()
+        mock_sessions = [mocker.MagicMock(id=1), mocker.MagicMock(id=2)]
+        mock_chat_service.get_sessions_by_character.return_value = mock_sessions
+
+        # Mock file service
+        mocker.patch("app.services.character_service.FileUploadService")
+
+        # Execute
+        service.delete_character(1, mock_chat_service)
+
+        # Verify chat sessions were retrieved and deleted
+        mock_chat_service.get_sessions_by_character.assert_called_once_with(1)
+        assert mock_chat_service.delete_session.call_count == 2
+        mock_chat_service.delete_session.assert_any_call(1)
+        mock_chat_service.delete_session.assert_any_call(2)
+
+        # Verify character was deleted
+        mock_repository.delete.assert_called_once_with(1)

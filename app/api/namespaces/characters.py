@@ -4,7 +4,6 @@ import logging
 
 from flask import request
 from flask_restx import Namespace, Resource
-from werkzeug.datastructures import FileStorage
 
 from app.api.models.character import (
     character_create_model,
@@ -16,8 +15,13 @@ from app.api.models.character import (
 )
 from app.api.namespaces import create_response, handle_exception
 from app.api.parsers.pagination import pagination_parser, search_parser
+from app.repositories.ai_model_repository import AIModelRepository
 from app.repositories.character_repository import CharacterRepository
+from app.repositories.chat_session_repository import ChatSessionRepository
+from app.repositories.system_prompt_repository import SystemPromptRepository
+from app.repositories.user_profile_repository import UserProfileRepository
 from app.services.character_service import CharacterService
+from app.services.chat_session_service import ChatSessionService
 from app.services.file_upload_service import FileUploadError, FileUploadService
 from app.utils.db import get_db_session
 from app.utils.exceptions import ValidationError
@@ -269,20 +273,37 @@ class CharacterItem(Resource):
     @api.doc("delete_character")
     @api.marshal_with(response_model)
     def delete(self, id):
-        """Delete a character."""
+        """Delete a character and all associated chat sessions."""
         try:
-            # Create service and repository with session
+            # Create services and repositories with session
             with get_db_session() as session:
                 character_repository = CharacterRepository(session)
-                character_service = CharacterService(character_repository)
+                chat_session_repository = ChatSessionRepository(session)
+                ai_model_repository = AIModelRepository(session)
+                system_prompt_repository = SystemPromptRepository(session)
+                user_profile_repository = UserProfileRepository(session)
 
-                # Delete character
-                character_service.delete_character(id)
+                character_service = CharacterService(character_repository)
+                chat_session_service = ChatSessionService(
+                    chat_session_repository,
+                    character_repository,
+                    user_profile_repository,
+                    ai_model_repository,
+                    system_prompt_repository,
+                )
+
+                # Delete character and its chat sessions
+                character_service.delete_character(id, chat_session_service)
 
                 # Commit the transaction
                 session.commit()
 
-                return create_response(data={"id": id, "message": "Character deleted"})
+                return create_response(
+                    data={
+                        "id": id,
+                        "message": "Character and associated chat sessions deleted",
+                    }
+                )
 
         except Exception as e:
             logger.exception(f"Error deleting character {id}")

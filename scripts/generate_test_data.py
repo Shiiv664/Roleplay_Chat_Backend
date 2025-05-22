@@ -40,7 +40,6 @@ def create_sample_characters(session: Session) -> List[Character]:
         Character(
             label="sherlock_holmes",
             name="Sherlock Holmes",
-            avatar_image="sherlock.jpg",
             description=(
                 "The world's only consulting detective, known for his logical "
                 "reasoning and observational skills."
@@ -49,7 +48,6 @@ def create_sample_characters(session: Session) -> List[Character]:
         Character(
             label="eliza",
             name="ELIZA",
-            avatar_image="eliza.jpg",
             description=(
                 "A classic AI therapist from the 1960s, designed to simulate "
                 "a psychotherapist."
@@ -58,13 +56,11 @@ def create_sample_characters(session: Session) -> List[Character]:
         Character(
             label="hal_9000",
             name="HAL 9000",
-            avatar_image="hal9000.jpg",
             description="The sentient computer from 2001: A Space Odyssey.",
         ),
         Character(
             label="hermione_granger",
             name="Hermione Granger",
-            avatar_image="hermione.jpg",
             description=(
                 "Brilliant witch from the Harry Potter series, known for her "
                 "intelligence and logical thinking."
@@ -73,7 +69,6 @@ def create_sample_characters(session: Session) -> List[Character]:
         Character(
             label="yoda",
             name="Master Yoda",
-            avatar_image="yoda.jpg",
             description=(
                 "Wise Jedi Master from Star Wars, known for his unique way of "
                 "speaking and deep wisdom."
@@ -101,19 +96,16 @@ def create_sample_user_profiles(session: Session) -> List[UserProfile]:
         UserProfile(
             label="default_user",
             name="Default User",
-            avatar_image="default_user.jpg",
             description="Default user profile for casual conversations.",
         ),
         UserProfile(
             label="detective",
             name="Detective",
-            avatar_image="detective.jpg",
             description="A detective persona for solving mysteries.",
         ),
         UserProfile(
             label="student",
             name="Student",
-            avatar_image="student.jpg",
             description="A student persona for learning and asking questions.",
         ),
     ]
@@ -420,7 +412,7 @@ def create_application_settings(
     app_settings.default_user_profile_id = user_profiles[0].id  # Default user
     app_settings.default_ai_model_id = ai_models[0].id  # GPT-3.5 Turbo
     app_settings.default_system_prompt_id = system_prompts[0].id  # Basic roleplay
-    app_settings.default_avatar_image = "default_avatar.jpg"
+    app_settings.default_avatar_image = ""
 
     session.add(app_settings)
 
