@@ -197,11 +197,17 @@ class TestUserProfileService:
         # Verify repository not called for any validation failures
         mock_repository.create.assert_not_called()
 
-    def test_update_profile(self, service, mock_repository, sample_profile):
+    def test_update_profile(self, service, mock_repository, sample_profile, mocker):
         """Test updating a user profile."""
         # Setup
         mock_repository.get_by_id.return_value = sample_profile
         mock_repository.get_by_label.return_value = None  # No conflict with new label
+
+        # Mock FileUploadService
+        mock_file_service = mocker.patch(
+            "app.services.user_profile_service.FileUploadService"
+        )
+        mock_file_service_instance = mock_file_service.return_value
 
         updated_profile = UserProfile(
             id=1,
@@ -230,6 +236,46 @@ class TestUserProfileService:
             avatar_image="new.png",
             description="Updated description",
         )
+        # Should delete old avatar when updating to new one
+        mock_file_service_instance.delete_avatar_image.assert_called_once_with(
+            "test.png"
+        )
+
+    def test_update_profile_avatar_same(
+        self, service, mock_repository, sample_profile, mocker
+    ):
+        """Test updating user profile with same avatar doesn't delete file."""
+        # Setup
+        mock_repository.get_by_id.return_value = sample_profile
+        mock_repository.get_by_label.return_value = None
+
+        # Mock FileUploadService
+        mock_file_service = mocker.patch(
+            "app.services.user_profile_service.FileUploadService"
+        )
+        mock_file_service_instance = mock_file_service.return_value
+
+        updated_profile = UserProfile(
+            id=1,
+            label="updated_profile",
+            name="Updated User",
+            avatar_image="test.png",  # Same as original
+            description="Updated description",
+        )
+        mock_repository.update.return_value = updated_profile
+
+        # Execute
+        result = service.update_profile(
+            profile_id=1,
+            label="updated_profile",
+            name="Updated User",
+            avatar_image="test.png",  # Same avatar
+            description="Updated description",
+        )
+
+        # Verify - should not delete avatar file since it's the same
+        assert result == updated_profile
+        mock_file_service_instance.delete_avatar_image.assert_not_called()
 
     def test_update_profile_partial(self, service, mock_repository, sample_profile):
         """Test partially updating a user profile."""
@@ -309,6 +355,12 @@ class TestUserProfileService:
         # Mock chat_sessions relationship with zero count
         mocker.patch("sqlalchemy.orm.dynamic.AppenderQuery.count", return_value=0)
 
+        # Mock FileUploadService
+        mock_file_service = mocker.patch(
+            "app.services.user_profile_service.FileUploadService"
+        )
+        mock_file_service_instance = mock_file_service.return_value
+
         # Ensure default_in_settings is None
         sample_profile.default_in_settings = None
 
@@ -317,6 +369,40 @@ class TestUserProfileService:
 
         # Verify
         mock_repository.delete.assert_called_once_with(1)
+        mock_file_service_instance.delete_avatar_image.assert_called_once_with(
+            "test.png"
+        )
+
+    def test_delete_profile_no_avatar(self, service, mock_repository, mocker):
+        """Test deleting a user profile without avatar doesn't try to delete file."""
+        # Setup - profile without avatar
+        profile_no_avatar = UserProfile(
+            id=1,
+            label="test_profile",
+            name="Test User",
+            avatar_image=None,
+            description="A test user profile",
+        )
+        mock_repository.get_by_id.return_value = profile_no_avatar
+
+        # Mock chat_sessions relationship with zero count
+        mocker.patch("sqlalchemy.orm.dynamic.AppenderQuery.count", return_value=0)
+
+        # Mock FileUploadService
+        mock_file_service = mocker.patch(
+            "app.services.user_profile_service.FileUploadService"
+        )
+        mock_file_service_instance = mock_file_service.return_value
+
+        # Ensure default_in_settings is None
+        profile_no_avatar.default_in_settings = None
+
+        # Execute
+        service.delete_profile(1)
+
+        # Verify
+        mock_repository.delete.assert_called_once_with(1)
+        mock_file_service_instance.delete_avatar_image.assert_not_called()
 
     def test_delete_profile_with_sessions(
         self, service, mock_repository, sample_profile, mocker

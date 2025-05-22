@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 
 from app.models.user_profile import UserProfile
 from app.repositories.user_profile_repository import UserProfileRepository
+from app.services.file_upload_service import FileUploadService
 from app.utils.exceptions import BusinessRuleError, ValidationError
 
 logger = logging.getLogger(__name__)
@@ -204,6 +205,11 @@ class UserProfileService:
             update_data["name"] = name
 
         if avatar_image is not None:
+            # If updating avatar, delete the old one first
+            if profile.avatar_image and avatar_image != profile.avatar_image:
+                file_service = FileUploadService()
+                file_service.delete_avatar_image(profile.avatar_image)
+                logger.info(f"Deleted old avatar file: {profile.avatar_image}")
             update_data["avatar_image"] = avatar_image
 
         if description is not None:
@@ -245,6 +251,12 @@ class UserProfileService:
                 "Cannot delete user profile that is set as default in application settings",
                 details={"profile_id": profile_id},
             )
+
+        # Delete avatar file if it exists
+        if profile.avatar_image:
+            file_service = FileUploadService()
+            file_service.delete_avatar_image(profile.avatar_image)
+            logger.info(f"Deleted avatar file: {profile.avatar_image}")
 
         logger.info(f"Deleting user profile with ID {profile_id}")
         self.repository.delete(profile_id)
