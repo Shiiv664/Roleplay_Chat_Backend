@@ -10,6 +10,7 @@ from app.repositories.application_settings_repository import (
 )
 from app.repositories.system_prompt_repository import SystemPromptRepository
 from app.repositories.user_profile_repository import UserProfileRepository
+from app.utils.encryption import encryption_service
 from app.utils.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
@@ -156,6 +157,74 @@ class ApplicationSettingsService:
             f"Updating default avatar image to {avatar_path if avatar_path else 'None'}"
         )
         return self.repository.update_default_avatar_image(avatar_path)
+
+    def set_openrouter_api_key(self, api_key: str) -> ApplicationSettings:
+        """Set the OpenRouter API key (encrypted storage).
+
+        Args:
+            api_key: The plaintext OpenRouter API key
+
+        Returns:
+            ApplicationSettings: The updated settings
+
+        Raises:
+            ValidationError: If the API key is invalid
+            DatabaseError: If a database error occurs
+        """
+        if not api_key or not api_key.strip():
+            raise ValidationError(
+                "OpenRouter API key cannot be empty",
+                details={"openrouter_api_key": "Must provide a valid API key"},
+            )
+
+        try:
+            encrypted_key = encryption_service.encrypt_api_key(api_key.strip())
+            logger.info("Setting OpenRouter API key (encrypted)")
+            return self.repository.save_settings(
+                openrouter_api_key_encrypted=encrypted_key
+            )
+        except Exception as e:
+            raise ValidationError(
+                f"Failed to encrypt API key: {e}",
+                details={"openrouter_api_key": "Encryption failed"},
+            )
+
+    def get_openrouter_api_key(self) -> Optional[str]:
+        """Get the decrypted OpenRouter API key.
+
+        Returns:
+            The decrypted API key, or None if not set
+
+        Raises:
+            ValidationError: If decryption fails
+            DatabaseError: If a database error occurs
+        """
+        settings = self.get_settings()
+        if not settings.openrouter_api_key_encrypted:
+            return None
+
+        try:
+            return encryption_service.decrypt_api_key(
+                settings.openrouter_api_key_encrypted
+            )
+        except Exception as e:
+            logger.error(f"Failed to decrypt OpenRouter API key: {e}")
+            raise ValidationError(
+                f"Failed to decrypt API key: {e}",
+                details={"openrouter_api_key": "Decryption failed"},
+            )
+
+    def clear_openrouter_api_key(self) -> ApplicationSettings:
+        """Clear the OpenRouter API key.
+
+        Returns:
+            ApplicationSettings: The updated settings
+
+        Raises:
+            DatabaseError: If a database error occurs
+        """
+        logger.info("Clearing OpenRouter API key")
+        return self.repository.save_settings(openrouter_api_key_encrypted=None)
 
     def update_settings(self, **kwargs) -> ApplicationSettings:
         """Update multiple application settings at once.

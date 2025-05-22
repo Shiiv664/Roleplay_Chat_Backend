@@ -220,6 +220,76 @@
       ],
       "type": "object"
     },
+    "OpenRouterAPIKeyRequest": {
+      "properties": {
+        "api_key": {
+          "description": "OpenRouter API key",
+          "type": "string"
+        }
+      },
+      "required": [
+        "api_key"
+      ],
+      "type": "object"
+    },
+    "OpenRouterAPIKeyStatus": {
+      "properties": {
+        "has_api_key": {
+          "description": "Whether an API key is configured",
+          "type": "boolean"
+        },
+        "key_length": {
+          "description": "Length of the configured API key (for verification)",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "OpenRouterAPIKeyStatusResponse": {
+      "properties": {
+        "data": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/OpenRouterAPIKeyStatus"
+            }
+          ],
+          "description": "API key status information"
+        },
+        "success": {
+          "default": true,
+          "description": "Success status",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "OpenRouterAPIKeySuccess": {
+      "properties": {
+        "message": {
+          "description": "Success message",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "OpenRouterAPIKeySuccessResponse": {
+      "properties": {
+        "data": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/OpenRouterAPIKeySuccess"
+            }
+          ],
+          "description": "Success message"
+        },
+        "success": {
+          "default": true,
+          "description": "Success status",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
     "Response": {
       "properties": {
         "data": {
@@ -759,7 +829,7 @@
             "description": "Character not found"
           }
         },
-        "summary": "Delete a character",
+        "summary": "Delete a character and all associated chat sessions",
         "tags": [
           "characters"
         ]
@@ -1421,6 +1491,94 @@
           }
         },
         "summary": "Update the application settings",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/settings/openrouter-api-key": {
+      "delete": {
+        "description": "Returns:\n    Success confirmation",
+        "operationId": "clear_openrouter_api_key",
+        "parameters": [
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/OpenRouterAPIKeySuccessResponse"
+            }
+          }
+        },
+        "summary": "Clear OpenRouter API key",
+        "tags": [
+          "settings"
+        ]
+      },
+      "get": {
+        "description": "Returns:\n    Status indicating whether an API key is configured",
+        "operationId": "get_openrouter_api_key_status",
+        "parameters": [
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/OpenRouterAPIKeyStatusResponse"
+            }
+          }
+        },
+        "summary": "Get OpenRouter API key status",
+        "tags": [
+          "settings"
+        ]
+      },
+      "put": {
+        "description": "Returns:\n    Success confirmation",
+        "operationId": "set_openrouter_api_key",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "payload",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OpenRouterAPIKeyRequest"
+            }
+          },
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/OpenRouterAPIKeySuccessResponse"
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          }
+        },
+        "summary": "Set OpenRouter API key",
         "tags": [
           "settings"
         ]

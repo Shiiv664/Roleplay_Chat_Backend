@@ -11,6 +11,11 @@ from app.api.models.application_settings import (
     application_settings_reset_response_model,
     application_settings_update_model,
     application_settings_with_relations_model,
+    openrouter_api_key_request_model,
+    openrouter_api_key_status_model,
+    openrouter_api_key_status_response_model,
+    openrouter_api_key_success_model,
+    openrouter_api_key_success_response_model,
     response_model,
 )
 from app.services.application_settings_service import ApplicationSettingsService
@@ -35,6 +40,15 @@ api.models[application_settings_reset_response_model.name] = (
     application_settings_reset_response_model
 )
 api.models[response_model.name] = response_model
+api.models[openrouter_api_key_request_model.name] = openrouter_api_key_request_model
+api.models[openrouter_api_key_status_model.name] = openrouter_api_key_status_model
+api.models[openrouter_api_key_status_response_model.name] = (
+    openrouter_api_key_status_response_model
+)
+api.models[openrouter_api_key_success_model.name] = openrouter_api_key_success_model
+api.models[openrouter_api_key_success_response_model.name] = (
+    openrouter_api_key_success_response_model
+)
 
 
 def error_response(status_code, message, error_code=None, details=None):
@@ -107,6 +121,7 @@ def format_settings_response(settings):
         "default_system_prompt_id": settings.default_system_prompt_id,
         "default_user_profile_id": settings.default_user_profile_id,
         "default_avatar_image": settings.default_avatar_image,
+        "has_openrouter_api_key": bool(settings.openrouter_api_key_encrypted),
     }
 
     # Add related entities if they exist
@@ -245,6 +260,100 @@ class ResetSettingsResource(Resource):
                             "default_avatar_image": reset_settings.default_avatar_image,
                         },
                     },
+                }
+        except DatabaseError as e:
+            logger.error(f"Database error: {e}")
+            return error_response(500, "Database error occurred", "DATABASE_ERROR")
+
+
+@api.route("/openrouter-api-key")
+class OpenRouterAPIKeyResource(Resource):
+    """Resource for managing OpenRouter API key."""
+
+    @api.doc("get_openrouter_api_key_status")
+    @api.marshal_with(response_model)
+    def get(self) -> Dict[str, Any]:
+        """Get OpenRouter API key status.
+
+        Returns:
+            Status indicating whether an API key is configured
+        """
+        from app.utils.db import session_scope
+
+        try:
+            with session_scope() as session:
+                settings_service = get_settings_service(session)
+                api_key = settings_service.get_openrouter_api_key()
+
+                return {
+                    "success": True,
+                    "data": {
+                        "has_api_key": api_key is not None,
+                        "key_length": len(api_key) if api_key else 0,
+                    },
+                }
+        except ValidationError as e:
+            return error_response(400, e.message, "VALIDATION_ERROR", e.details)
+        except DatabaseError as e:
+            logger.error(f"Database error: {e}")
+            return error_response(500, "Database error occurred", "DATABASE_ERROR")
+
+    @api.doc("set_openrouter_api_key")
+    @api.expect(openrouter_api_key_request_model)
+    @api.marshal_with(response_model)
+    @api.response(400, "Validation error")
+    def put(self) -> Dict[str, Any]:
+        """Set OpenRouter API key.
+
+        Returns:
+            Success confirmation
+        """
+        from app.utils.db import session_scope
+
+        try:
+            data = request.json or {}
+            api_key = data.get("api_key")
+
+            if not api_key:
+                return error_response(
+                    400,
+                    "API key is required",
+                    "VALIDATION_ERROR",
+                    {"api_key": "This field is required"},
+                )
+
+            with session_scope() as session:
+                settings_service = get_settings_service(session)
+                settings_service.set_openrouter_api_key(api_key)
+
+                return {
+                    "success": True,
+                    "data": {"message": "OpenRouter API key set successfully"},
+                }
+        except ValidationError as e:
+            return error_response(400, e.message, "VALIDATION_ERROR", e.details)
+        except DatabaseError as e:
+            logger.error(f"Database error: {e}")
+            return error_response(500, "Database error occurred", "DATABASE_ERROR")
+
+    @api.doc("clear_openrouter_api_key")
+    @api.marshal_with(response_model)
+    def delete(self) -> Dict[str, Any]:
+        """Clear OpenRouter API key.
+
+        Returns:
+            Success confirmation
+        """
+        from app.utils.db import session_scope
+
+        try:
+            with session_scope() as session:
+                settings_service = get_settings_service(session)
+                settings_service.clear_openrouter_api_key()
+
+                return {
+                    "success": True,
+                    "data": {"message": "OpenRouter API key cleared successfully"},
                 }
         except DatabaseError as e:
             logger.error(f"Database error: {e}")

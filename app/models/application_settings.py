@@ -26,6 +26,7 @@ class ApplicationSettings(Base):
         default_system_prompt_id: Foreign key to the default system prompt.
         default_user_profile_id: Foreign key to the default user profile.
         default_avatar_image: Path or URL to default avatar image.
+        openrouter_api_key_encrypted: Encrypted OpenRouter API key for AI model access.
     """
 
     __tablename__ = "applicationSettings"
@@ -42,6 +43,7 @@ class ApplicationSettings(Base):
         Integer, ForeignKey("userProfile.id"), nullable=True
     )
     default_avatar_image: Mapped[Optional[str]] = Column(String, nullable=True)
+    openrouter_api_key_encrypted: Mapped[Optional[str]] = Column(String, nullable=True)
 
     # Relationships
     default_ai_model = relationship("AIModel", back_populates="default_in_settings")

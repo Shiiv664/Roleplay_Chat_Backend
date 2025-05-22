@@ -47,6 +47,9 @@ application_settings_with_relations_model = Model(
         "default_avatar_image": fields.String(
             required=False, description="Default avatar image path or URL"
         ),
+        "has_openrouter_api_key": fields.Boolean(
+            readOnly=True, description="Whether OpenRouter API key is configured"
+        ),
         "default_ai_model": fields.Nested(
             ai_model_short_model, description="Default AI Model details", skip_none=True
         ),
@@ -89,6 +92,51 @@ application_settings_reset_response_model = Model(
         "message": fields.String(description="Success message"),
         "settings": fields.Nested(
             application_settings_model, description="Reset settings"
+        ),
+    },
+)
+
+# OpenRouter API key models
+openrouter_api_key_request_model = Model(
+    "OpenRouterAPIKeyRequest",
+    {
+        "api_key": fields.String(required=True, description="OpenRouter API key"),
+    },
+)
+
+openrouter_api_key_status_model = Model(
+    "OpenRouterAPIKeyStatus",
+    {
+        "has_api_key": fields.Boolean(description="Whether an API key is configured"),
+        "key_length": fields.Integer(
+            description="Length of the configured API key (for verification)"
+        ),
+    },
+)
+
+openrouter_api_key_status_response_model = Model(
+    "OpenRouterAPIKeyStatusResponse",
+    {
+        "success": fields.Boolean(default=True, description="Success status"),
+        "data": fields.Nested(
+            openrouter_api_key_status_model, description="API key status information"
+        ),
+    },
+)
+
+openrouter_api_key_success_model = Model(
+    "OpenRouterAPIKeySuccess",
+    {
+        "message": fields.String(description="Success message"),
+    },
+)
+
+openrouter_api_key_success_response_model = Model(
+    "OpenRouterAPIKeySuccessResponse",
+    {
+        "success": fields.Boolean(default=True, description="Success status"),
+        "data": fields.Nested(
+            openrouter_api_key_success_model, description="Success message"
         ),
     },
 )

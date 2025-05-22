@@ -557,3 +557,162 @@ class TestApplicationSettingsService:
             default_user_profile_id=None,
             default_avatar_image=None,
         )
+
+    # OpenRouter API Key Tests
+
+    @patch("app.services.application_settings_service.encryption_service")
+    def test_set_openrouter_api_key_success(
+        self,
+        mock_encryption_service,
+        service,
+        mock_application_settings_repository,
+        sample_settings,
+    ):
+        """Test successfully setting OpenRouter API key."""
+        # Setup
+        api_key = "sk-or-test-api-key-123"
+        encrypted_key = "encrypted_api_key_data"
+        mock_encryption_service.encrypt_api_key.return_value = encrypted_key
+        mock_application_settings_repository.save_settings.return_value = (
+            sample_settings
+        )
+
+        # Execute
+        result = service.set_openrouter_api_key(api_key)
+
+        # Verify
+        assert result == sample_settings
+        mock_encryption_service.encrypt_api_key.assert_called_once_with(api_key)
+        mock_application_settings_repository.save_settings.assert_called_once_with(
+            openrouter_api_key_encrypted=encrypted_key
+        )
+
+    @patch("app.services.application_settings_service.encryption_service")
+    def test_set_openrouter_api_key_empty_string(
+        self,
+        mock_encryption_service,
+        service,
+        mock_application_settings_repository,
+    ):
+        """Test setting empty OpenRouter API key raises validation error."""
+        with pytest.raises(ValidationError, match="OpenRouter API key cannot be empty"):
+            service.set_openrouter_api_key("")
+
+        mock_encryption_service.encrypt_api_key.assert_not_called()
+        mock_application_settings_repository.save_settings.assert_not_called()
+
+    @patch("app.services.application_settings_service.encryption_service")
+    def test_set_openrouter_api_key_whitespace_only(
+        self,
+        mock_encryption_service,
+        service,
+        mock_application_settings_repository,
+    ):
+        """Test setting whitespace-only OpenRouter API key raises validation error."""
+        with pytest.raises(ValidationError, match="OpenRouter API key cannot be empty"):
+            service.set_openrouter_api_key("   ")
+
+        mock_encryption_service.encrypt_api_key.assert_not_called()
+        mock_application_settings_repository.save_settings.assert_not_called()
+
+    @patch("app.services.application_settings_service.encryption_service")
+    def test_set_openrouter_api_key_encryption_failure(
+        self,
+        mock_encryption_service,
+        service,
+        mock_application_settings_repository,
+    ):
+        """Test handling encryption failure when setting API key."""
+        # Setup
+        api_key = "sk-or-test-api-key-123"
+        mock_encryption_service.encrypt_api_key.side_effect = Exception(
+            "Encryption failed"
+        )
+
+        # Execute & Verify
+        with pytest.raises(ValidationError, match="Failed to encrypt API key"):
+            service.set_openrouter_api_key(api_key)
+
+        mock_application_settings_repository.save_settings.assert_not_called()
+
+    @patch("app.services.application_settings_service.encryption_service")
+    def test_get_openrouter_api_key_success(
+        self,
+        mock_encryption_service,
+        service,
+        mock_application_settings_repository,
+    ):
+        """Test successfully getting OpenRouter API key."""
+        # Setup
+        encrypted_key = "encrypted_api_key_data"
+        decrypted_key = "sk-or-test-api-key-123"
+        settings = ApplicationSettings(id=1, openrouter_api_key_encrypted=encrypted_key)
+        mock_application_settings_repository.get_settings.return_value = settings
+        mock_encryption_service.decrypt_api_key.return_value = decrypted_key
+
+        # Execute
+        result = service.get_openrouter_api_key()
+
+        # Verify
+        assert result == decrypted_key
+        mock_encryption_service.decrypt_api_key.assert_called_once_with(encrypted_key)
+
+    @patch("app.services.application_settings_service.encryption_service")
+    def test_get_openrouter_api_key_no_key_stored(
+        self,
+        mock_encryption_service,
+        service,
+        mock_application_settings_repository,
+    ):
+        """Test getting OpenRouter API key when none is stored."""
+        # Setup
+        settings = ApplicationSettings(id=1, openrouter_api_key_encrypted=None)
+        mock_application_settings_repository.get_settings.return_value = settings
+
+        # Execute
+        result = service.get_openrouter_api_key()
+
+        # Verify
+        assert result is None
+        mock_encryption_service.decrypt_api_key.assert_not_called()
+
+    @patch("app.services.application_settings_service.encryption_service")
+    def test_get_openrouter_api_key_decryption_failure(
+        self,
+        mock_encryption_service,
+        service,
+        mock_application_settings_repository,
+    ):
+        """Test handling decryption failure when getting API key."""
+        # Setup
+        encrypted_key = "encrypted_api_key_data"
+        settings = ApplicationSettings(id=1, openrouter_api_key_encrypted=encrypted_key)
+        mock_application_settings_repository.get_settings.return_value = settings
+        mock_encryption_service.decrypt_api_key.side_effect = Exception(
+            "Decryption failed"
+        )
+
+        # Execute & Verify
+        with pytest.raises(ValidationError, match="Failed to decrypt API key"):
+            service.get_openrouter_api_key()
+
+    def test_clear_openrouter_api_key_success(
+        self,
+        service,
+        mock_application_settings_repository,
+        sample_settings,
+    ):
+        """Test successfully clearing OpenRouter API key."""
+        # Setup
+        mock_application_settings_repository.save_settings.return_value = (
+            sample_settings
+        )
+
+        # Execute
+        result = service.clear_openrouter_api_key()
+
+        # Verify
+        assert result == sample_settings
+        mock_application_settings_repository.save_settings.assert_called_once_with(
+            openrouter_api_key_encrypted=None
+        )

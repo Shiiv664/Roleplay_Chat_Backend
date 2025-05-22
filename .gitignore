@@ -84,6 +84,9 @@ instance/
 uploads/
 test_uploads/
 
+# Encryption key file
+encryption.key
+
 # mypy
 .mypy_cache/
 
