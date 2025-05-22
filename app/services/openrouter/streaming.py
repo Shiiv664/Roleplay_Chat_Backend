@@ -6,6 +6,7 @@ import time
 import uuid
 from typing import Any, Dict, List, Optional, Set
 
+from app.config import get_config
 from app.services.openrouter.client import OpenRouterClient
 
 logger = logging.getLogger(__name__)
@@ -260,12 +261,16 @@ class StreamingHandler:
                 f"Removed connection {connection_id} from stream {stream_state.stream_id}"
             )
 
-    def cleanup_inactive_streams(self, max_age_seconds: int = 300) -> None:
+    def cleanup_inactive_streams(self, max_age_seconds: Optional[int] = None) -> None:
         """Clean up streams that have been inactive for too long.
 
         Args:
-            max_age_seconds: Maximum age in seconds before cleanup
+            max_age_seconds: Maximum age in seconds before cleanup (uses config default if None)
         """
+        if max_age_seconds is None:
+            config = get_config()
+            max_age_seconds = config.OPENROUTER_STREAM_TIMEOUT
+
         current_time = time.time()
         to_remove = []
 

@@ -232,64 +232,6 @@
       ],
       "type": "object"
     },
-    "OpenRouterAPIKeyStatus": {
-      "properties": {
-        "has_api_key": {
-          "description": "Whether an API key is configured",
-          "type": "boolean"
-        },
-        "key_length": {
-          "description": "Length of the configured API key (for verification)",
-          "type": "integer"
-        }
-      },
-      "type": "object"
-    },
-    "OpenRouterAPIKeyStatusResponse": {
-      "properties": {
-        "data": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/OpenRouterAPIKeyStatus"
-            }
-          ],
-          "description": "API key status information"
-        },
-        "success": {
-          "default": true,
-          "description": "Success status",
-          "type": "boolean"
-        }
-      },
-      "type": "object"
-    },
-    "OpenRouterAPIKeySuccess": {
-      "properties": {
-        "message": {
-          "description": "Success message",
-          "type": "string"
-        }
-      },
-      "type": "object"
-    },
-    "OpenRouterAPIKeySuccessResponse": {
-      "properties": {
-        "data": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/OpenRouterAPIKeySuccess"
-            }
-          ],
-          "description": "Success message"
-        },
-        "success": {
-          "default": true,
-          "description": "Success status",
-          "type": "boolean"
-        }
-      },
-      "type": "object"
-    },
     "Response": {
       "properties": {
         "data": {
@@ -1513,7 +1455,7 @@
           "200": {
             "description": "Success",
             "schema": {
-              "$ref": "#/definitions/OpenRouterAPIKeySuccessResponse"
+              "$ref": "#/definitions/Response"
             }
           }
         },
@@ -1538,7 +1480,7 @@
           "200": {
             "description": "Success",
             "schema": {
-              "$ref": "#/definitions/OpenRouterAPIKeyStatusResponse"
+              "$ref": "#/definitions/Response"
             }
           }
         },
@@ -1571,7 +1513,7 @@
           "200": {
             "description": "Success",
             "schema": {
-              "$ref": "#/definitions/OpenRouterAPIKeySuccessResponse"
+              "$ref": "#/definitions/Response"
             }
           },
           "400": {

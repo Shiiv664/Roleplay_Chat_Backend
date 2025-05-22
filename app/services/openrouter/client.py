@@ -8,6 +8,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from app.config import get_config
 from app.utils.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
@@ -16,12 +17,12 @@ logger = logging.getLogger(__name__)
 class OpenRouterClient:
     """Client for interacting with OpenRouter API."""
 
-    def __init__(self, api_key: str, timeout: int = 120) -> None:
+    def __init__(self, api_key: str, timeout: Optional[int] = None) -> None:
         """Initialize the OpenRouter client.
 
         Args:
             api_key: OpenRouter API key for authentication
-            timeout: Request timeout in seconds
+            timeout: Request timeout in seconds (uses config default if None)
 
         Raises:
             ValidationError: If API key is invalid
@@ -29,19 +30,24 @@ class OpenRouterClient:
         if not api_key or not api_key.strip():
             raise ValidationError("OpenRouter API key is required")
 
+        config = get_config()
         self.api_key = api_key.strip()
         self.base_url = "https://openrouter.ai/api/v1"
-        self.timeout = timeout
+        self.timeout = timeout or config.OPENROUTER_TIMEOUT
 
         # Configure session with retry strategy
         self.session = requests.Session()
         retry_strategy = Retry(
-            total=3,
+            total=config.OPENROUTER_MAX_RETRIES,
             status_forcelist=[429, 500, 502, 503, 504],
-            method_whitelist=["HEAD", "GET", "POST"],
+            allowed_methods=["HEAD", "GET", "POST"],
             backoff_factor=1,
         )
-        adapter = HTTPAdapter(max_retries=retry_strategy)
+        adapter = HTTPAdapter(
+            max_retries=retry_strategy,
+            pool_connections=config.OPENROUTER_CONNECTION_POOL_SIZE,
+            pool_maxsize=config.OPENROUTER_CONNECTION_POOL_SIZE,
+        )
         self.session.mount("http://", adapter)
         self.session.mount("https://", adapter)
 
@@ -185,8 +191,11 @@ class OpenRouterClient:
         response = response_data["stream"]
 
         try:
+            config = get_config()
             buffer = ""
-            for chunk in response.iter_content(chunk_size=1024, decode_unicode=True):
+            for chunk in response.iter_content(
+                chunk_size=config.OPENROUTER_STREAM_CHUNK_SIZE, decode_unicode=True
+            ):
                 if chunk:
                     buffer += chunk
 

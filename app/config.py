@@ -30,6 +30,25 @@ class Config:
     APP_NAME: str = "LLM Roleplay Chat Client"
     API_VERSION: str = "v1"
 
+    # OpenRouter API streaming configuration
+    OPENROUTER_TIMEOUT: int = int(os.getenv("OPENROUTER_TIMEOUT", "120"))  # seconds
+    OPENROUTER_STREAM_CHUNK_SIZE: int = int(
+        os.getenv("OPENROUTER_STREAM_CHUNK_SIZE", "1024")
+    )  # bytes
+    OPENROUTER_MAX_CONNECTIONS_PER_SESSION: int = int(
+        os.getenv("OPENROUTER_MAX_CONNECTIONS_PER_SESSION", "5")
+    )
+    OPENROUTER_STREAM_TIMEOUT: int = int(
+        os.getenv("OPENROUTER_STREAM_TIMEOUT", "300")
+    )  # seconds
+    OPENROUTER_CONNECTION_POOL_SIZE: int = int(
+        os.getenv("OPENROUTER_CONNECTION_POOL_SIZE", "10")
+    )
+    OPENROUTER_MAX_RETRIES: int = int(os.getenv("OPENROUTER_MAX_RETRIES", "3"))
+
+    # Encryption configuration
+    ENCRYPTION_KEY: str = os.getenv("ENCRYPTION_KEY", "")
+
 
 class DevelopmentConfig(Config):
     """Development configuration."""
