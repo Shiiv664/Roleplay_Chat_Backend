@@ -161,11 +161,17 @@ class TestCharacterService:
         # Verify repository not called for any validation failures
         mock_repository.create.assert_not_called()
 
-    def test_update_character(self, service, mock_repository, sample_character):
+    def test_update_character(self, service, mock_repository, sample_character, mocker):
         """Test updating a character."""
         # Setup
         mock_repository.get_by_id.return_value = sample_character
         mock_repository.get_by_label.return_value = None  # No conflict with new label
+
+        # Mock FileUploadService
+        mock_file_service = mocker.patch(
+            "app.services.character_service.FileUploadService"
+        )
+        mock_file_service_instance = mock_file_service.return_value
 
         updated_character = Character(
             id=1,
@@ -194,6 +200,46 @@ class TestCharacterService:
             avatar_image="new.png",
             description="Updated description",
         )
+        # Should delete old avatar when updating to new one
+        mock_file_service_instance.delete_avatar_image.assert_called_once_with(
+            "test.png"
+        )
+
+    def test_update_character_avatar_same(
+        self, service, mock_repository, sample_character, mocker
+    ):
+        """Test updating character with same avatar doesn't delete file."""
+        # Setup
+        mock_repository.get_by_id.return_value = sample_character
+        mock_repository.get_by_label.return_value = None
+
+        # Mock FileUploadService
+        mock_file_service = mocker.patch(
+            "app.services.character_service.FileUploadService"
+        )
+        mock_file_service_instance = mock_file_service.return_value
+
+        updated_character = Character(
+            id=1,
+            label="updated_char",
+            name="Updated Character",
+            avatar_image="test.png",  # Same as original
+            description="Updated description",
+        )
+        mock_repository.update.return_value = updated_character
+
+        # Execute
+        result = service.update_character(
+            character_id=1,
+            label="updated_char",
+            name="Updated Character",
+            avatar_image="test.png",  # Same avatar
+            description="Updated description",
+        )
+
+        # Verify - should not delete avatar file since it's the same
+        assert result == updated_character
+        mock_file_service_instance.delete_avatar_image.assert_not_called()
 
     def test_update_character_partial(self, service, mock_repository, sample_character):
         """Test partially updating a character."""
@@ -278,11 +324,48 @@ class TestCharacterService:
         # Patch the count method to return zero
         mocker.patch("sqlalchemy.orm.dynamic.AppenderQuery.count", return_value=0)
 
+        # Mock FileUploadService
+        mock_file_service = mocker.patch(
+            "app.services.character_service.FileUploadService"
+        )
+        mock_file_service_instance = mock_file_service.return_value
+
         # Execute
         service.delete_character(1)
 
         # Verify
         mock_repository.delete.assert_called_once_with(1)
+        mock_file_service_instance.delete_avatar_image.assert_called_once_with(
+            "test.png"
+        )
+
+    def test_delete_character_no_avatar(self, service, mock_repository, mocker):
+        """Test deleting a character without avatar doesn't try to delete file."""
+        # Setup - character without avatar
+        character_no_avatar = Character(
+            id=1,
+            label="test_char",
+            name="Test Character",
+            avatar_image=None,
+            description="A test character",
+        )
+        mock_repository.get_by_id.return_value = character_no_avatar
+
+        # Patch the count method to return zero
+        mocker.patch("sqlalchemy.orm.dynamic.AppenderQuery.count", return_value=0)
+
+        # Mock FileUploadService
+        mock_file_service = mocker.patch(
+            "app.services.character_service.FileUploadService"
+        )
+        mock_file_service_instance = mock_file_service.return_value
+
+        # Execute
+        service.delete_character(1)
+
+        # Verify
+        mock_repository.delete.assert_called_once_with(1)
+        mock_file_service_instance.delete_avatar_image.assert_not_called()
 
     def test_delete_character_with_sessions(
         self, service, mock_repository, sample_character, mocker

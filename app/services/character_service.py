@@ -170,6 +170,11 @@ class CharacterService:
             update_data["name"] = name
 
         if avatar_image is not None:
+            # If updating avatar, delete the old one first
+            if character.avatar_image and avatar_image != character.avatar_image:
+                file_service = FileUploadService()
+                file_service.delete_avatar_image(character.avatar_image)
+                logger.info(f"Deleted old avatar file: {character.avatar_image}")
             update_data["avatar_image"] = avatar_image
 
         if description is not None:
@@ -208,6 +213,12 @@ class CharacterService:
                     "Cannot delete character that is used in chat sessions",
                     details={"character_id": character_id},
                 )
+
+        # Delete avatar file if it exists
+        if character.avatar_image:
+            file_service = FileUploadService()
+            file_service.delete_avatar_image(character.avatar_image)
+            logger.info(f"Deleted avatar file: {character.avatar_image}")
 
         logger.info(f"Deleting character with ID {character_id}")
         self.repository.delete(character_id)
