@@ -164,6 +164,65 @@ class MessageResource(Resource):
             logger.error(f"Database error: {e}")
             return error_response(500, "Database error occurred", "DATABASE_ERROR")
 
+    @api.doc("update_message")
+    @api.expect(message_update_model)
+    @api.response(200, "Success", response_model)
+    @api.response(400, "Validation error")
+    @api.response(404, "Message not found")
+    def put(self, message_id: int) -> Dict[str, Any]:
+        """Update a message.
+
+        Only the content can be updated, not the role or chat session.
+
+        Args:
+            message_id: The message ID
+
+        Returns:
+            The updated message data
+        """
+        try:
+            message_service = get_message_service()
+            content = request.json.get("content")
+            message = message_service.update_message(message_id, content)
+            return {
+                "success": True,
+                "data": format_message_data(message),
+            }
+        except ValidationError as e:
+            return error_response(400, e.message, "VALIDATION_ERROR", e.details)
+        except ResourceNotFoundError as e:
+            return error_response(404, e.message, "RESOURCE_NOT_FOUND")
+        except BusinessRuleError as e:
+            return error_response(403, e.message, "BUSINESS_RULE_ERROR")
+        except DatabaseError as e:
+            logger.error(f"Database error: {e}")
+            return error_response(500, "Database error occurred", "DATABASE_ERROR")
+
+    @api.doc("delete_message")
+    @api.response(200, "Success", response_model)
+    @api.response(404, "Message not found")
+    def delete(self, message_id: int) -> Dict[str, Any]:
+        """Delete a message.
+
+        Args:
+            message_id: The message ID
+
+        Returns:
+            Success message
+        """
+        try:
+            message_service = get_message_service()
+            message_service.delete_message(message_id)
+            return {
+                "success": True,
+                "data": {"message": "Message deleted successfully"},
+            }
+        except ResourceNotFoundError as e:
+            return error_response(404, e.message, "RESOURCE_NOT_FOUND")
+        except DatabaseError as e:
+            logger.error(f"Database error: {e}")
+            return error_response(500, "Database error occurred", "DATABASE_ERROR")
+
 
 @api.route("/chat-sessions/<int:chat_session_id>/send-message")
 @api.param("chat_session_id", "The chat session identifier")
@@ -274,65 +333,6 @@ class SendMessageResource(Resource):
         except Exception as e:
             logger.error(f"Unexpected error in send_message: {str(e)}")
             return error_response(500, "An unexpected error occurred", "INTERNAL_ERROR")
-
-    @api.doc("update_message")
-    @api.expect(message_update_model)
-    @api.response(200, "Success", response_model)
-    @api.response(400, "Validation error")
-    @api.response(404, "Message not found")
-    def put(self, message_id: int) -> Dict[str, Any]:
-        """Update a message.
-
-        Only the content can be updated, not the role or chat session.
-
-        Args:
-            message_id: The message ID
-
-        Returns:
-            The updated message data
-        """
-        try:
-            message_service = get_message_service()
-            content = request.json.get("content")
-            message = message_service.update_message(message_id, content)
-            return {
-                "success": True,
-                "data": format_message_data(message),
-            }
-        except ValidationError as e:
-            return error_response(400, e.message, "VALIDATION_ERROR", e.details)
-        except ResourceNotFoundError as e:
-            return error_response(404, e.message, "RESOURCE_NOT_FOUND")
-        except BusinessRuleError as e:
-            return error_response(403, e.message, "BUSINESS_RULE_ERROR")
-        except DatabaseError as e:
-            logger.error(f"Database error: {e}")
-            return error_response(500, "Database error occurred", "DATABASE_ERROR")
-
-    @api.doc("delete_message")
-    @api.response(200, "Success", response_model)
-    @api.response(404, "Message not found")
-    def delete(self, message_id: int) -> Dict[str, Any]:
-        """Delete a message.
-
-        Args:
-            message_id: The message ID
-
-        Returns:
-            Success message
-        """
-        try:
-            message_service = get_message_service()
-            message_service.delete_message(message_id)
-            return {
-                "success": True,
-                "data": {"message": "Message deleted successfully"},
-            }
-        except ResourceNotFoundError as e:
-            return error_response(404, e.message, "RESOURCE_NOT_FOUND")
-        except DatabaseError as e:
-            logger.error(f"Database error: {e}")
-            return error_response(500, "Database error occurred", "DATABASE_ERROR")
 
 
 @api.route("/chat-sessions/<int:chat_session_id>")

@@ -13,11 +13,11 @@ from app.utils.exceptions import ResourceNotFoundError, ValidationError
 @pytest.fixture
 def mock_message_service():
     """Create a mock for the MessageService."""
-    with patch("app.api.namespaces.messages.MessageService") as mock_service_class:
+    with patch("app.api.namespaces.messages.get_message_service") as mock_get_service:
         # Create a mock service instance
         mock_service = MagicMock()
-        # Configure the class to return our mock when instantiated
-        mock_service_class.return_value = mock_service
+        # Configure the factory to return our mock
+        mock_get_service.return_value = mock_service
         yield mock_service
 
 
