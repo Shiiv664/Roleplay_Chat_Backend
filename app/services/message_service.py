@@ -1,12 +1,15 @@
 """Service for Message entity operations."""
 
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import AsyncGenerator, Dict, List, Optional, Tuple
 
+from app.models.chat_session import ChatSession
 from app.models.message import Message, MessageRole
 from app.repositories.chat_session_repository import ChatSessionRepository
 from app.repositories.message_repository import MessageRepository
-from app.utils.exceptions import ValidationError
+from app.services.application_settings_service import ApplicationSettingsService
+from app.services.openrouter.client import OpenRouterClient
+from app.utils.exceptions import BusinessRuleError, ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -23,15 +26,21 @@ class MessageService:
         self,
         message_repository: MessageRepository,
         chat_session_repository: ChatSessionRepository,
+        settings_service: Optional[ApplicationSettingsService] = None,
+        openrouter_client: Optional[OpenRouterClient] = None,
     ):
         """Initialize the service with repositories.
 
         Args:
             message_repository: Repository for Message data access
             chat_session_repository: Repository for ChatSession data access
+            settings_service: Service for application settings (optional)
+            openrouter_client: Client for OpenRouter API (optional)
         """
         self.repository = message_repository
         self.chat_session_repository = chat_session_repository
+        self.settings_service = settings_service
+        self.openrouter_client = openrouter_client
 
     def get_message(self, message_id: int) -> Message:
         """Get a message by ID.
@@ -374,3 +383,173 @@ class MessageService:
                 "Message content is too long",
                 details={"content": "Content must be less than 65535 characters"},
             )
+
+    def build_system_prompt(self, chat_session: ChatSession) -> str:
+        """Constructs the complete system prompt for the AI model.
+
+        Args:
+            chat_session: The chat session containing all configuration
+
+        Returns:
+            Complete system prompt string
+
+        Format:
+            [pre_prompt if enabled]
+            ---
+            [system_prompt.content]
+            ---
+            [character.description]
+            ---
+            [user_profile.description]
+        """
+        prompt_parts = []
+
+        # Add pre-prompt if enabled
+        if chat_session.pre_prompt_enabled and chat_session.pre_prompt:
+            prompt_parts.append(chat_session.pre_prompt.strip())
+
+        # Add system prompt
+        if chat_session.system_prompt and chat_session.system_prompt.content:
+            prompt_parts.append(chat_session.system_prompt.content.strip())
+
+        # Add character description
+        if chat_session.character and chat_session.character.description:
+            prompt_parts.append(chat_session.character.description.strip())
+        else:
+            prompt_parts.append("No character description provided")
+
+        # Add user profile description
+        if chat_session.user_profile and chat_session.user_profile.description:
+            prompt_parts.append(chat_session.user_profile.description.strip())
+        else:
+            prompt_parts.append("No user description provided")
+
+        # Join with separator
+        return "\n---\n".join(prompt_parts)
+
+    def format_messages_for_openrouter(
+        self, chat_session_id: int, new_user_message: str
+    ) -> List[Dict[str, str]]:
+        """Formats all messages for OpenRouter API including history and new message.
+
+        Args:
+            chat_session_id: ID of the chat session
+            new_user_message: The new message from the user
+
+        Returns:
+            List of message dictionaries with 'role' and 'content' keys
+
+        Message Order:
+            1. System message (from build_system_prompt)
+            2. All historical messages (user/assistant pairs)
+            3. Post-prompt (if enabled) as system message
+            4. New user message
+        """
+        # Get chat session with all relationships
+        chat_session = self.chat_session_repository.get_by_id_with_relations(
+            chat_session_id
+        )
+
+        # Build system prompt
+        system_prompt = self.build_system_prompt(chat_session)
+
+        # Start with system message
+        messages = [{"role": "system", "content": system_prompt}]
+
+        # Get all historical messages
+        history = self.repository.get_by_chat_session_id(chat_session_id)
+
+        # Add historical messages
+        for msg in history:
+            messages.append({"role": msg.role.value, "content": msg.content})
+
+        # Add post-prompt if enabled
+        if chat_session.post_prompt_enabled and chat_session.post_prompt:
+            messages.append(
+                {"role": "system", "content": chat_session.post_prompt.strip()}
+            )
+
+        # Add new user message
+        messages.append({"role": "user", "content": new_user_message})
+
+        return messages
+
+    async def generate_streaming_response(
+        self, chat_session_id: int, user_message: str, user_message_id: int
+    ) -> AsyncGenerator[str, None]:
+        """Generates AI response using OpenRouter streaming API.
+
+        Args:
+            chat_session_id: ID of the chat session
+            user_message: The user's message content
+            user_message_id: ID of the saved user message
+
+        Yields:
+            Chunks of the AI response as they arrive
+
+        Side Effects:
+            - Saves completed AI message to database
+            - Updates stream state management
+
+        Process:
+            1. Get chat session with all relationships
+            2. Build system prompt using chat session config
+            3. Format message history + new message
+            4. Get model name from chat_session.ai_model.label
+            5. Call OpenRouter streaming API
+            6. Yield chunks as they arrive
+            7. Save complete response to database
+        """
+        # Check dependencies
+        if not self.settings_service:
+            raise BusinessRuleError("Settings service not available")
+        if not self.openrouter_client:
+            raise BusinessRuleError("OpenRouter client not available")
+
+        # Get OpenRouter API key
+        api_key = self.settings_service.get_openrouter_api_key()
+        if not api_key:
+            raise BusinessRuleError("OpenRouter API key not configured")
+
+        # Get chat session with relationships
+        chat_session = self.chat_session_repository.get_by_id_with_relations(
+            chat_session_id
+        )
+
+        # Get model name
+        if not chat_session.ai_model or not chat_session.ai_model.label:
+            raise BusinessRuleError("AI model not configured for chat session")
+
+        model_name = chat_session.ai_model.label
+
+        # Format messages for OpenRouter
+        messages = self.format_messages_for_openrouter(chat_session_id, user_message)
+
+        # Accumulate response for saving
+        accumulated_response = ""
+
+        try:
+            # Stream response from OpenRouter
+            async for chunk in self.openrouter_client.create_streaming_completion(
+                model=model_name, messages=messages, stream=True
+            ):
+                # Extract content from chunk
+                if chunk.get("choices") and chunk["choices"][0].get("delta"):
+                    content = chunk["choices"][0]["delta"].get("content", "")
+                    if content:
+                        accumulated_response += content
+                        yield content
+
+            # Save complete AI response
+            if accumulated_response:
+                self.create_assistant_message(chat_session_id, accumulated_response)
+
+        except Exception as e:
+            logger.error(f"Error during streaming response: {str(e)}")
+            # Save partial response if any
+            if accumulated_response:
+                error_message = (
+                    f"{accumulated_response}\n\n[Response interrupted due to error]"
+                )
+                self.create_assistant_message(chat_session_id, error_message)
+            raise

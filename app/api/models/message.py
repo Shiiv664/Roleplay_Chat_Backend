@@ -73,3 +73,71 @@ response_model = Model(
         "error": fields.Raw(description="Error information, if any"),
     },
 )
+
+# Request model for sending messages
+send_message_model = Model(
+    "SendMessage",
+    {
+        "content": fields.String(
+            required=True,
+            description="The message content to send",
+            example="Hello, can you help me understand quantum physics?",
+        ),
+        "stream": fields.Boolean(
+            required=False,
+            default=True,
+            description="Whether to stream the AI response. If true, returns SSE stream. If false, returns complete response (not implemented yet).",
+            example=True,
+        ),
+    },
+)
+
+# Response model for streaming events
+stream_event_model = Model(
+    "StreamEvent",
+    {
+        "type": fields.String(
+            required=True,
+            description="Event type",
+            enum=["content", "error", "done"],
+            example="content",
+        ),
+        "data": fields.String(
+            required=False,
+            description="Event data (chunk of response text for content events)",
+            example="Quantum physics is",
+        ),
+        "error": fields.String(
+            required=False,
+            description="Error message (only for error events)",
+            example="OpenRouter API rate limit exceeded",
+        ),
+    },
+)
+
+# Response model for non-streaming mode (future)
+send_message_response_model = Model(
+    "SendMessageResponse",
+    {
+        "user_message": fields.Nested(
+            message_model, description="The created user message"
+        ),
+        "ai_response": fields.Nested(
+            message_model, description="The generated AI response"
+        ),
+    },
+)
+
+# Error response model
+send_message_error_model = Model(
+    "SendMessageError",
+    {
+        "success": fields.Boolean(default=False, description="Always false for errors"),
+        "error": fields.String(description="Error type", example="VALIDATION_ERROR"),
+        "message": fields.String(
+            description="Human-readable error message",
+            example="Message content is required",
+        ),
+        "details": fields.Raw(description="Additional error details", required=False),
+    },
+)

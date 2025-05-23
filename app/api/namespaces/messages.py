@@ -1,9 +1,10 @@
 """Messages API namespace definition."""
 
+import asyncio
 import logging
 from typing import Any, Dict, Tuple
 
-from flask import request
+from flask import Response, request, stream_with_context
 from flask_restx import Namespace, Resource
 
 from app.api.models.message import (
@@ -30,6 +31,14 @@ logger = logging.getLogger(__name__)
 # Create the namespace
 api = Namespace("messages", description="Message operations")
 
+# Import new models
+from app.api.models.message import (
+    send_message_error_model,
+    send_message_model,
+    send_message_response_model,
+    stream_event_model,
+)
+
 # Register models
 api.models[message_model.name] = message_model
 api.models[message_create_model.name] = message_create_model
@@ -38,6 +47,10 @@ api.models[message_with_response_model.name] = message_with_response_model
 api.models[message_list_model.name] = message_list_model
 api.models[response_model.name] = response_model
 api.models[user_message_create_model.name] = user_message_create_model
+api.models[send_message_model.name] = send_message_model
+api.models[send_message_error_model.name] = send_message_error_model
+api.models[send_message_response_model.name] = send_message_response_model
+api.models[stream_event_model.name] = stream_event_model
 
 
 def get_message_service() -> MessageService:
@@ -49,14 +62,32 @@ def get_message_service() -> MessageService:
     Returns:
         MessageService: An initialized message service
     """
+    from app.repositories.application_settings_repository import (
+        ApplicationSettingsRepository,
+    )
     from app.repositories.chat_session_repository import ChatSessionRepository
     from app.repositories.message_repository import MessageRepository
+    from app.services.application_settings_service import ApplicationSettingsService
+    from app.services.openrouter.client import OpenRouterClient
     from app.utils.db import get_session
 
     db_session = get_session()
     message_repo = MessageRepository(db_session)
     chat_session_repo = ChatSessionRepository(db_session)
-    return MessageService(message_repo, chat_session_repo)
+
+    # Create settings service
+    settings_repo = ApplicationSettingsRepository(db_session)
+    settings_service = ApplicationSettingsService(settings_repo)
+
+    # Create OpenRouter client
+    openrouter_client = OpenRouterClient()
+
+    return MessageService(
+        message_repo,
+        chat_session_repo,
+        settings_service=settings_service,
+        openrouter_client=openrouter_client,
+    )
 
 
 def format_message_data(message):
@@ -132,6 +163,117 @@ class MessageResource(Resource):
         except DatabaseError as e:
             logger.error(f"Database error: {e}")
             return error_response(500, "Database error occurred", "DATABASE_ERROR")
+
+
+@api.route("/chat-sessions/<int:chat_session_id>/send-message")
+@api.param("chat_session_id", "The chat session identifier")
+class SendMessageResource(Resource):
+    """Send a message to the chat session and get AI response."""
+
+    @api.doc(
+        "send_message",
+        description="Send a user message and receive an AI-generated response. "
+        "Supports both streaming (SSE) and non-streaming modes.",
+    )
+    @api.expect(send_message_model)
+    @api.response(200, "Success (streaming mode returns SSE stream)")
+    @api.response(201, "Success (non-streaming mode)", send_message_response_model)
+    @api.response(400, "Validation error", send_message_error_model)
+    @api.response(404, "Chat session not found", send_message_error_model)
+    @api.response(500, "Internal server error", send_message_error_model)
+    @api.response(503, "OpenRouter service unavailable", send_message_error_model)
+    @api.produces(["text/event-stream", "application/json"])
+    def post(self, chat_session_id: int):
+        """Send a message and get AI response.
+
+        When stream=true (default):
+        - Returns Server-Sent Events stream
+        - Content-Type: text/event-stream
+        - Events format:
+          - data: {"type": "content", "data": "chunk of text"}
+          - data: {"type": "done"}
+          - data: {"type": "error", "error": "error message"}
+
+        When stream=false:
+        - Returns JSON with both messages
+        - Content-Type: application/json
+
+        Note: Non-streaming mode is not implemented yet.
+        """
+        try:
+            # Validate request
+            content = request.json.get("content")
+            stream = request.json.get("stream", True)  # Default to streaming
+
+            if not content:
+                raise ValidationError("Message content is required")
+
+            # Get services
+            message_service = get_message_service()
+
+            # Save user message
+            user_message = message_service.create_user_message(chat_session_id, content)
+
+            if stream:
+                # Import SSE utilities
+                from app.utils.sse import (
+                    format_content_event,
+                    format_done_event,
+                    format_error_event,
+                )
+
+                # Create async generator wrapper
+                async def generate():
+                    try:
+                        async for chunk in message_service.generate_streaming_response(
+                            chat_session_id=chat_session_id,
+                            user_message=content,
+                            user_message_id=user_message.id,
+                        ):
+                            yield format_content_event(chunk)
+                        yield format_done_event()
+                    except Exception as e:
+                        logger.error(f"Streaming error: {str(e)}")
+                        yield format_error_event(str(e))
+
+                # Convert async generator to sync for Flask
+                def sync_generator():
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    try:
+                        async_gen = generate()
+                        while True:
+                            try:
+                                chunk = loop.run_until_complete(async_gen.__anext__())
+                                yield chunk
+                            except StopAsyncIteration:
+                                break
+                    finally:
+                        loop.close()
+
+                # Return SSE response
+                return Response(
+                    stream_with_context(sync_generator()),
+                    mimetype="text/event-stream",
+                    headers={
+                        "Cache-Control": "no-cache",
+                        "X-Accel-Buffering": "no",  # Disable Nginx buffering
+                        "Connection": "keep-alive",
+                    },
+                )
+            else:
+                # Non-streaming mode - not implemented yet
+                raise NotImplementedError("Non-streaming mode not yet implemented")
+
+        except ValidationError as e:
+            return error_response(400, e.message, "VALIDATION_ERROR", e.details)
+        except ResourceNotFoundError as e:
+            return error_response(404, e.message, "RESOURCE_NOT_FOUND")
+        except BusinessRuleError as e:
+            return error_response(503, str(e), "SERVICE_UNAVAILABLE")
+        except Exception as e:
+            logger.error(f"Unexpected error in send_message: {str(e)}")
+            return error_response(500, "An unexpected error occurred", "INTERNAL_ERROR")
 
     @api.doc("update_message")
     @api.expect(message_update_model)

@@ -213,49 +213,219 @@ Implement real-time AI message generation using OpenRouter API with streaming ca
 
 ### Client-Side Streaming Implementation
 
-#### SSE Connection Management
-- Send message via POST to `/api/chat-sessions/{id}/send-message`
-- Handle SSE response stream from same endpoint
-- Parse SSE events: content, done, error, cancelled
-- Support both EventSource API and manual stream reading
+#### Sending Messages
+- POST to `/api/chat-sessions/{id}/send-message` with `{content: string, stream: boolean}`
+- Default `stream: true` for SSE response
+- Handle response based on Content-Type header
+
+#### SSE Event Format
+```json
+// Content event
+{"type": "content", "data": "chunk of response text"}
+
+// Completion event
+{"type": "done"}
+
+// Error event
+{"type": "error", "error": "error description"}
+
+// Cancellation event (Phase 8)
+{"type": "cancelled", "reason": "user_cancelled"}
+```
+
+#### Implementation Approaches
+
+##### Option 1: Manual Stream Reading (Recommended for control)
+```javascript
+const response = await fetch('/api/chat-sessions/123/send-message', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: 'Hello!', stream: true })
+});
+
+const reader = response.body.getReader();
+const decoder = new TextDecoder();
+
+while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const chunk = decoder.decode(value);
+    const lines = chunk.split('\n');
+
+    for (const line of lines) {
+        if (line.startsWith('data: ')) {
+            const event = JSON.parse(line.slice(6));
+            handleStreamEvent(event);
+        }
+    }
+}
+```
+
+##### Option 2: EventSource API (Simpler but less flexible)
+Note: Requires separate endpoint for SSE or workaround since EventSource only supports GET
 
 #### Message Display
-- Stream incoming chunks and append to message display
-- Show typing/streaming indicators while receiving data
-- Handle message completion and transition to static display
-- Display partial messages during streaming
+- Append chunks to message display as they arrive
+- Show typing indicator during streaming
+- Transition to static display on completion
+- Handle markdown formatting in real-time
 
 #### Streaming Controls
-- Add cancel button during active streaming
-- Call `cancelMessage` endpoint when user cancels
-- Disable message input during streaming
-- Show streaming status and progress indicators
+- Disable message input during active stream
+- Show cancel button while streaming
+- POST to `/api/chat-sessions/{id}/cancel-message` to cancel
+- Clear indicators on completion or error
 
 #### Error Handling
-- Handle SSE connection errors gracefully
-- Show user-friendly error messages for API failures
-- Implement retry logic for failed connections
-- Handle stream cancellation confirmations
+- Parse error events from SSE stream
+- Display user-friendly error messages
+- Handle network disconnections gracefully
+- Retry logic for transient failures
 
-#### Page Refresh Recovery
-- Check for active streams on page load
-- Reconnect to ongoing streams automatically
-- Display accumulated content from server state
-- Seamless continuation of interrupted streams
-
-### Client-Side Cancellation UI
-- Add cancel button to streaming message interface
-- Disable button after cancellation initiated
-- Show cancellation progress/confirmation
-- Handle cancellation success/error responses
-- Update UI state after successful cancellation
+#### State Management
+- Track streaming state: idle, streaming, completed, error
+- Store partial message content
+- Update UI based on state transitions
+- Handle multiple tabs (consider shared state)
 
 ### UX Considerations
-- Clear visual indicators for streaming vs completed messages
-- Smooth scrolling as content arrives
-- Proper loading states and feedback
-- Accessibility support for screen readers
-- Mobile-responsive streaming interface
+- Smooth text appearance (avoid flickering)
+- Auto-scroll to bottom as content arrives
+- Preserve scroll position if user scrolls up
+- Loading states for initial connection
+- Mobile-optimized streaming experience
+
+### Complete Frontend Example
+
+```typescript
+// TypeScript/React example
+interface StreamEvent {
+    type: 'content' | 'done' | 'error' | 'cancelled';
+    data?: string;
+    error?: string;
+    reason?: string;
+}
+
+class ChatService {
+    async sendMessage(chatSessionId: number, content: string, stream = true) {
+        const response = await fetch(`/api/chat-sessions/${chatSessionId}/send-message`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content, stream })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to send message');
+        }
+
+        if (stream && response.headers.get('content-type')?.includes('text/event-stream')) {
+            return this.handleStream(response);
+        }
+
+        return response.json();
+    }
+
+    private async *handleStream(response: Response): AsyncGenerator<StreamEvent> {
+        const reader = response.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+
+            // Keep incomplete line in buffer
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    try {
+                        const event = JSON.parse(line.slice(6));
+                        yield event;
+                    } catch (e) {
+                        console.error('Failed to parse SSE event:', e);
+                    }
+                }
+            }
+        }
+    }
+
+    async cancelMessage(chatSessionId: number) {
+        const response = await fetch(`/api/chat-sessions/${chatSessionId}/cancel-message`, {
+            method: 'POST'
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to cancel message');
+        }
+
+        return response.json();
+    }
+}
+
+// Usage in React component
+function ChatComponent({ chatSessionId }: { chatSessionId: number }) {
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [streamingMessage, setStreamingMessage] = useState('');
+    const [isStreaming, setIsStreaming] = useState(false);
+
+    const sendMessage = async (content: string) => {
+        // Add user message
+        const userMessage = { role: 'user', content, timestamp: new Date() };
+        setMessages(prev => [...prev, userMessage]);
+
+        // Start streaming
+        setIsStreaming(true);
+        setStreamingMessage('');
+
+        try {
+            const chatService = new ChatService();
+            const stream = await chatService.sendMessage(chatSessionId, content);
+
+            for await (const event of stream) {
+                switch (event.type) {
+                    case 'content':
+                        setStreamingMessage(prev => prev + event.data);
+                        break;
+
+                    case 'done':
+                        // Add completed message to history
+                        const aiMessage = {
+                            role: 'assistant',
+                            content: streamingMessage,
+                            timestamp: new Date()
+                        };
+                        setMessages(prev => [...prev, aiMessage]);
+                        setStreamingMessage('');
+                        setIsStreaming(false);
+                        break;
+
+                    case 'error':
+                        console.error('Stream error:', event.error);
+                        setIsStreaming(false);
+                        // Show error to user
+                        break;
+                }
+            }
+        } catch (error) {
+            console.error('Failed to send message:', error);
+            setIsStreaming(false);
+        }
+    };
+
+    return (
+        <div>
+            {/* Render messages and streaming content */}
+            {isStreaming && <div className="streaming-message">{streamingMessage}</div>}
+        </div>
+    );
+}
+```
 
 ## Dependencies to Review
 - Current message service structure

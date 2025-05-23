@@ -186,6 +186,42 @@
       },
       "type": "object"
     },
+    "Message": {
+      "properties": {
+        "chat_session_id": {
+          "description": "Chat Session ID",
+          "type": "integer"
+        },
+        "content": {
+          "description": "Message content",
+          "type": "string"
+        },
+        "id": {
+          "description": "Message ID",
+          "type": "integer"
+        },
+        "role": {
+          "description": "Message role (user or assistant)",
+          "enum": [
+            "user",
+            "assistant"
+          ],
+          "example": "user",
+          "type": "string"
+        },
+        "timestamp": {
+          "description": "Message timestamp",
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "chat_session_id",
+        "content",
+        "role"
+      ],
+      "type": "object"
+    },
     "MessageCreate": {
       "properties": {
         "content": {
@@ -250,6 +286,70 @@
           "default": true,
           "description": "Success status",
           "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "SendMessage": {
+      "properties": {
+        "content": {
+          "description": "The message content to send",
+          "example": "Hello, can you help me understand quantum physics?",
+          "type": "string"
+        },
+        "stream": {
+          "default": true,
+          "description": "Whether to stream the AI response. If true, returns SSE stream. If false, returns complete response (not implemented yet).",
+          "example": true,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "content"
+      ],
+      "type": "object"
+    },
+    "SendMessageError": {
+      "properties": {
+        "details": {
+          "description": "Additional error details",
+          "type": "object"
+        },
+        "error": {
+          "description": "Error type",
+          "example": "VALIDATION_ERROR",
+          "type": "string"
+        },
+        "message": {
+          "description": "Human-readable error message",
+          "example": "Message content is required",
+          "type": "string"
+        },
+        "success": {
+          "default": false,
+          "description": "Always false for errors",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "SendMessageResponse": {
+      "properties": {
+        "ai_response": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/Message"
+            }
+          ],
+          "description": "The generated AI response"
+        },
+        "user_message": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/Message"
+            }
+          ],
+          "description": "The created user message"
         }
       },
       "type": "object"
@@ -1170,39 +1270,7 @@
           "required": true,
           "type": "integer"
         }
-      ],
-      "post": {
-        "description": "Args:\n    chat_session_id: The chat session ID\n\nReturns:\n    The created message data",
-        "operationId": "create_message",
-        "parameters": [
-          {
-            "in": "body",
-            "name": "payload",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/MessageCreate"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Message created",
-            "schema": {
-              "$ref": "#/definitions/Response"
-            }
-          },
-          "400": {
-            "description": "Validation error"
-          },
-          "404": {
-            "description": "Chat session not found"
-          }
-        },
-        "summary": "Create a new message in a chat session",
-        "tags": [
-          "messages"
-        ]
-      }
+      ]
     },
     "/messages/chat-sessions/{chat_session_id}/latest": {
       "get": {
@@ -1264,6 +1332,74 @@
         ]
       }
     },
+    "/messages/chat-sessions/{chat_session_id}/send-message": {
+      "parameters": [
+        {
+          "description": "The chat session identifier",
+          "in": "path",
+          "name": "chat_session_id",
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "post": {
+        "description": "Send a user message and receive an AI-generated response. Supports both streaming (SSE) and non-streaming modes.\nWhen stream=true (default):\n- Returns Server-Sent Events stream\n- Content-Type: text/event-stream\n- Events format:\n  - data: {\"type\": \"content\", \"data\": \"chunk of text\"}\n  - data: {\"type\": \"done\"}\n  - data: {\"type\": \"error\", \"error\": \"error message\"}\n  \nWhen stream=false:\n- Returns JSON with both messages\n- Content-Type: application/json\n\nNote: Non-streaming mode is not implemented yet.",
+        "operationId": "send_message",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "payload",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SendMessage"
+            }
+          }
+        ],
+        "produces": [
+          "text/event-stream",
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success (streaming mode returns SSE stream)"
+          },
+          "201": {
+            "description": "Success (non-streaming mode)",
+            "schema": {
+              "$ref": "#/definitions/SendMessageResponse"
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "schema": {
+              "$ref": "#/definitions/SendMessageError"
+            }
+          },
+          "404": {
+            "description": "Chat session not found",
+            "schema": {
+              "$ref": "#/definitions/SendMessageError"
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/definitions/SendMessageError"
+            }
+          },
+          "503": {
+            "description": "OpenRouter service unavailable",
+            "schema": {
+              "$ref": "#/definitions/SendMessageError"
+            }
+          }
+        },
+        "summary": "Send a message and get AI response",
+        "tags": [
+          "messages"
+        ]
+      }
+    },
     "/messages/chat-sessions/{chat_session_id}/user-message": {
       "parameters": [
         {
@@ -1308,25 +1444,6 @@
       }
     },
     "/messages/{message_id}": {
-      "delete": {
-        "description": "Args:\n    message_id: The message ID\n\nReturns:\n    Success message",
-        "operationId": "delete_message",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "schema": {
-              "$ref": "#/definitions/Response"
-            }
-          },
-          "404": {
-            "description": "Message not found"
-          }
-        },
-        "summary": "Delete a message",
-        "tags": [
-          "messages"
-        ]
-      },
       "get": {
         "description": "Args:\n    message_id: The message ID\n\nReturns:\n    The message data",
         "operationId": "get_message",
@@ -1354,39 +1471,7 @@
           "required": true,
           "type": "integer"
         }
-      ],
-      "put": {
-        "description": "Only the content can be updated, not the role or chat session.\n\nArgs:\n    message_id: The message ID\n\nReturns:\n    The updated message data",
-        "operationId": "update_message",
-        "parameters": [
-          {
-            "in": "body",
-            "name": "payload",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/MessageUpdate"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "schema": {
-              "$ref": "#/definitions/Response"
-            }
-          },
-          "400": {
-            "description": "Validation error"
-          },
-          "404": {
-            "description": "Message not found"
-          }
-        },
-        "summary": "Update a message",
-        "tags": [
-          "messages"
-        ]
-      }
+      ]
     },
     "/settings/": {
       "get": {
