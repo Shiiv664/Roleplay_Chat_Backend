@@ -34,7 +34,7 @@ Implement real-time AI message generation using OpenRouter API with streaming ca
 
 ### 2.2 System Prompt Construction
 - Implement prompt builder in message service
-- Handle concatenation: `preSystemPrompt + separator + systemPrompt + separator + character_description + separator + userProfile_description`
+- Handle concatenation: `preSystemPrompt + separator + systemPrompt + separator + character.description + separator + userProfile.description`
 - Use separator: `\n---\n`
 
 ### 2.3 Message History Processing
@@ -60,15 +60,16 @@ Implement real-time AI message generation using OpenRouter API with streaming ca
 ### 3.2 Request Flow
 1. Validate request parameters (content required, stream defaults to true)
 2. Save user message to database with role "user"
-3. Build system prompt (preSystemPrompt + systemPrompt + character_description + userProfile_description)
-4. Fetch message history and add postSystemPrompt before new user message
-5. If streaming:
+3. Load chat session with all relationships (ai_model, system_prompt, character, user_profile)
+4. Build system prompt using chat session configuration
+5. Format message history with system prompt + history + postSystemPrompt + new user message
+6. If streaming:
    - Return SSE response with text/event-stream content type
    - Stream AI response chunks to client as they arrive
-6. If not streaming (future implementation):
+7. If not streaming (future implementation):
    - Generate complete response
    - Return JSON with both messages
-7. Save complete AI response with role "assistant"
+8. Save complete AI response with role "assistant"
 
 ### 3.3 Concurrency Control
 - Implement session-level locking during streaming
@@ -78,9 +79,9 @@ Implement real-time AI message generation using OpenRouter API with streaming ca
 ## Phase 4: Response Streaming
 
 ### 4.1 Server-Sent Events (SSE) Implementation
-- Create SSE endpoint: `/api/chat/{session_id}/stream`
+- SSE response directly from sendMessage endpoint when stream=true
 - Implement `text/event-stream` response format
-- Use EventSource API on client side
+- Event types: content, done, error, cancelled
 
 ### 4.2 Stream State Management
 - Track active streams per chat session in memory/Redis
@@ -148,9 +149,9 @@ Implement real-time AI message generation using OpenRouter API with streaming ca
 - **Modularity**: OpenRouter implementation should be easily replaceable with other providers (Anthropic, OpenAI)
 - **Security**: API keys encrypted using Fernet, encryption key in environment variable
 - **API Key Storage**: Stored in ApplicationSettings table (encrypted), managed via settings API
+- **Model Selection**: AI model name from `chat_session.ai_model.label`
 - **Scalability**: Consider connection limits and resource usage
 - **UX**: Clear indicators for streaming state and progress
-- **Cancellation**: Future endpoint for stopping mid-stream (Phase 8)
 
 ## Part 2: Stream Cancellation Implementation
 
@@ -213,10 +214,10 @@ Implement real-time AI message generation using OpenRouter API with streaming ca
 ### Client-Side Streaming Implementation
 
 #### SSE Connection Management
-- Use EventSource API to connect to `/api/chat/{session_id}/stream`
-- Handle connection states: connecting, open, closed, error
-- Implement automatic reconnection on connection drops
-- Support multiple tabs with same chat session
+- Send message via POST to `/api/chat-sessions/{id}/send-message`
+- Handle SSE response stream from same endpoint
+- Parse SSE events: content, done, error, cancelled
+- Support both EventSource API and manual stream reading
 
 #### Message Display
 - Stream incoming chunks and append to message display
