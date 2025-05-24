@@ -1,6 +1,5 @@
 """Messages API namespace definition."""
 
-import asyncio
 import logging
 from typing import Any, Dict, Tuple
 
@@ -62,11 +61,14 @@ def get_message_service() -> MessageService:
     Returns:
         MessageService: An initialized message service
     """
+    from app.repositories.ai_model_repository import AIModelRepository
     from app.repositories.application_settings_repository import (
         ApplicationSettingsRepository,
     )
     from app.repositories.chat_session_repository import ChatSessionRepository
     from app.repositories.message_repository import MessageRepository
+    from app.repositories.system_prompt_repository import SystemPromptRepository
+    from app.repositories.user_profile_repository import UserProfileRepository
     from app.services.application_settings_service import ApplicationSettingsService
     from app.services.openrouter.client import OpenRouterClient
     from app.utils.db import get_session
@@ -77,10 +79,20 @@ def get_message_service() -> MessageService:
 
     # Create settings service
     settings_repo = ApplicationSettingsRepository(db_session)
-    settings_service = ApplicationSettingsService(settings_repo)
+    settings_service = ApplicationSettingsService(
+        settings_repo, 
+        AIModelRepository(db_session),
+        SystemPromptRepository(db_session), 
+        UserProfileRepository(db_session)
+    )
 
-    # Create OpenRouter client
-    openrouter_client = OpenRouterClient()
+    # Create OpenRouter client with API key
+    api_key = settings_service.get_openrouter_api_key()
+    if not api_key:
+        # Return service without OpenRouter client - will fail gracefully
+        openrouter_client = None
+    else:
+        openrouter_client = OpenRouterClient(api_key=api_key)
 
     return MessageService(
         message_repo,
@@ -281,10 +293,10 @@ class SendMessageResource(Resource):
                     format_error_event,
                 )
 
-                # Create async generator wrapper
-                async def generate():
+                # Create generator wrapper for SSE
+                def generate():
                     try:
-                        async for chunk in message_service.generate_streaming_response(
+                        for chunk in message_service.generate_streaming_response(
                             chat_session_id=chat_session_id,
                             user_message=content,
                             user_message_id=user_message.id,
@@ -295,24 +307,9 @@ class SendMessageResource(Resource):
                         logger.error(f"Streaming error: {str(e)}")
                         yield format_error_event(str(e))
 
-                # Convert async generator to sync for Flask
-                def sync_generator():
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    try:
-                        async_gen = generate()
-                        while True:
-                            try:
-                                chunk = loop.run_until_complete(async_gen.__anext__())
-                                yield chunk
-                            except StopAsyncIteration:
-                                break
-                    finally:
-                        loop.close()
-
                 # Return SSE response
                 return Response(
-                    stream_with_context(sync_generator()),
+                    stream_with_context(generate()),
                     mimetype="text/event-stream",
                     headers={
                         "Cache-Control": "no-cache",

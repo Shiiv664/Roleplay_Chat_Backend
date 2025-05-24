@@ -1,7 +1,7 @@
 """Service for Message entity operations."""
 
 import logging
-from typing import AsyncGenerator, Dict, List, Optional, Tuple
+from typing import AsyncGenerator, Dict, Iterator, List, Optional, Tuple
 
 from app.models.chat_session import ChatSession
 from app.models.message import Message, MessageRole
@@ -474,9 +474,9 @@ class MessageService:
 
         return messages
 
-    async def generate_streaming_response(
+    def generate_streaming_response(
         self, chat_session_id: int, user_message: str, user_message_id: int
-    ) -> AsyncGenerator[str, None]:
+    ) -> Iterator[str]:
         """Generates AI response using OpenRouter streaming API.
 
         Args:
@@ -530,8 +530,8 @@ class MessageService:
 
         try:
             # Stream response from OpenRouter
-            async for chunk in self.openrouter_client.create_streaming_completion(
-                model=model_name, messages=messages, stream=True
+            for chunk in self.openrouter_client.chat_completion_stream(
+                model=model_name, messages=messages
             ):
                 # Extract content from chunk
                 if chunk.get("choices") and chunk["choices"][0].get("delta"):
