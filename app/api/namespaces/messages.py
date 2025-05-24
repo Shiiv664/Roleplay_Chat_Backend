@@ -282,8 +282,14 @@ class SendMessageResource(Resource):
             # Get services
             message_service = get_message_service()
 
-            # Save user message
+            # Save user message and commit it
             user_message = message_service.create_user_message(chat_session_id, content)
+            try:
+                message_service.repository.session.commit()
+            except Exception as e:
+                message_service.repository.session.rollback()
+                logger.error(f"Failed to save user message: {e}")
+                raise BusinessRuleError("Failed to save user message")
 
             if stream:
                 # Import SSE utilities

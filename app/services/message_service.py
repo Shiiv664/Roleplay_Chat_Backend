@@ -542,7 +542,14 @@ class MessageService:
 
             # Save complete AI response
             if accumulated_response:
-                self.create_assistant_message(chat_session_id, accumulated_response)
+                ai_message = self.create_assistant_message(chat_session_id, accumulated_response)
+                # Commit the session to ensure message is saved
+                try:
+                    self.repository.session.commit()
+                except Exception as commit_error:
+                    logger.error(f"Failed to commit AI message: {commit_error}")
+                    self.repository.session.rollback()
+                    raise
 
         except Exception as e:
             logger.error(f"Error during streaming response: {str(e)}")
@@ -551,5 +558,10 @@ class MessageService:
                 error_message = (
                     f"{accumulated_response}\n\n[Response interrupted due to error]"
                 )
-                self.create_assistant_message(chat_session_id, error_message)
+                try:
+                    self.create_assistant_message(chat_session_id, error_message)
+                    self.repository.session.commit()
+                except Exception as commit_error:
+                    logger.error(f"Failed to commit partial message: {commit_error}")
+                    self.repository.session.rollback()
             raise
