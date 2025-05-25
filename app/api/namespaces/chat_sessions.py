@@ -16,6 +16,9 @@ from app.api.namespaces import create_response, handle_exception
 from app.api.parsers.chat_session import recent_sessions_parser
 from app.api.parsers.pagination import pagination_parser
 from app.repositories.ai_model_repository import AIModelRepository
+from app.repositories.application_settings_repository import (
+    ApplicationSettingsRepository,
+)
 from app.repositories.character_repository import CharacterRepository
 from app.repositories.chat_session_repository import ChatSessionRepository
 from app.repositories.system_prompt_repository import SystemPromptRepository
@@ -88,7 +91,7 @@ class ChatSessionList(Resource):
     @api.expect(chat_session_create_model)
     @api.marshal_with(response_model)
     def post(self):
-        """Create a new chat session."""
+        """Create a new chat session with default settings."""
         try:
             # Get request data
             data = request.json
@@ -100,6 +103,7 @@ class ChatSessionList(Resource):
                 user_profile_repository = UserProfileRepository(session)
                 ai_model_repository = AIModelRepository(session)
                 system_prompt_repository = SystemPromptRepository(session)
+                application_settings_repository = ApplicationSettingsRepository(session)
 
                 chat_session_service = ChatSessionService(
                     chat_session_repository,
@@ -107,18 +111,12 @@ class ChatSessionList(Resource):
                     user_profile_repository,
                     ai_model_repository,
                     system_prompt_repository,
+                    application_settings_repository,
                 )
 
-                # Create chat session
-                chat_session = chat_session_service.create_session(
-                    character_id=data.get("character_id"),
-                    user_profile_id=data.get("user_profile_id"),
-                    ai_model_id=data.get("ai_model_id"),
-                    system_prompt_id=data.get("system_prompt_id"),
-                    pre_prompt=data.get("pre_prompt"),
-                    pre_prompt_enabled=data.get("pre_prompt_enabled", False),
-                    post_prompt=data.get("post_prompt"),
-                    post_prompt_enabled=data.get("post_prompt_enabled", False),
+                # Create chat session with defaults
+                chat_session = chat_session_service.create_session_with_defaults(
+                    character_id=data.get("character_id")
                 )
 
                 # Commit the transaction
@@ -150,12 +148,15 @@ class ChatSessionItem(Resource):
                 ai_model_repository = AIModelRepository(session)
                 system_prompt_repository = SystemPromptRepository(session)
 
+                application_settings_repository = ApplicationSettingsRepository(session)
+
                 chat_session_service = ChatSessionService(
                     chat_session_repository,
                     character_repository,
                     user_profile_repository,
                     ai_model_repository,
                     system_prompt_repository,
+                    application_settings_repository,
                 )
 
                 # Get chat session with relations
@@ -184,12 +185,15 @@ class ChatSessionItem(Resource):
                 ai_model_repository = AIModelRepository(session)
                 system_prompt_repository = SystemPromptRepository(session)
 
+                application_settings_repository = ApplicationSettingsRepository(session)
+
                 chat_session_service = ChatSessionService(
                     chat_session_repository,
                     character_repository,
                     user_profile_repository,
                     ai_model_repository,
                     system_prompt_repository,
+                    application_settings_repository,
                 )
 
                 # Update chat session
@@ -225,12 +229,15 @@ class ChatSessionItem(Resource):
                 ai_model_repository = AIModelRepository(session)
                 system_prompt_repository = SystemPromptRepository(session)
 
+                application_settings_repository = ApplicationSettingsRepository(session)
+
                 chat_session_service = ChatSessionService(
                     chat_session_repository,
                     character_repository,
                     user_profile_repository,
                     ai_model_repository,
                     system_prompt_repository,
+                    application_settings_repository,
                 )
 
                 # Delete chat session
@@ -270,12 +277,15 @@ class RecentChatSessions(Resource):
                 ai_model_repository = AIModelRepository(session)
                 system_prompt_repository = SystemPromptRepository(session)
 
+                application_settings_repository = ApplicationSettingsRepository(session)
+
                 chat_session_service = ChatSessionService(
                     chat_session_repository,
                     character_repository,
                     user_profile_repository,
                     ai_model_repository,
                     system_prompt_repository,
+                    application_settings_repository,
                 )
 
                 # Get recent chat sessions
@@ -309,12 +319,15 @@ class CharacterChatSessions(Resource):
                 ai_model_repository = AIModelRepository(session)
                 system_prompt_repository = SystemPromptRepository(session)
 
+                application_settings_repository = ApplicationSettingsRepository(session)
+
                 chat_session_service = ChatSessionService(
                     chat_session_repository,
                     character_repository,
                     user_profile_repository,
                     ai_model_repository,
                     system_prompt_repository,
+                    application_settings_repository,
                 )
 
                 # Get chat sessions by character
@@ -350,12 +363,15 @@ class UserProfileChatSessions(Resource):
                 ai_model_repository = AIModelRepository(session)
                 system_prompt_repository = SystemPromptRepository(session)
 
+                application_settings_repository = ApplicationSettingsRepository(session)
+
                 chat_session_service = ChatSessionService(
                     chat_session_repository,
                     character_repository,
                     user_profile_repository,
                     ai_model_repository,
                     system_prompt_repository,
+                    application_settings_repository,
                 )
 
                 # Get chat sessions by user profile

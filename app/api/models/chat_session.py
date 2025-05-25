@@ -46,27 +46,6 @@ chat_session_create_model = Model(
         "character_id": fields.Integer(
             required=True, description="Character ID for this session"
         ),
-        "user_profile_id": fields.Integer(
-            required=True, description="User Profile ID for this session"
-        ),
-        "ai_model_id": fields.Integer(
-            required=True, description="AI Model ID for this session"
-        ),
-        "system_prompt_id": fields.Integer(
-            required=True, description="System Prompt ID for this session"
-        ),
-        "pre_prompt": fields.String(
-            required=False, description="Optional text to add before each AI request"
-        ),
-        "pre_prompt_enabled": fields.Boolean(
-            required=False, description="Whether pre-prompt is enabled", default=False
-        ),
-        "post_prompt": fields.String(
-            required=False, description="Optional text to add after each AI request"
-        ),
-        "post_prompt_enabled": fields.Boolean(
-            required=False, description="Whether post-prompt is enabled", default=False
-        ),
     },
 )
 

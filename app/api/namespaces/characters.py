@@ -16,6 +16,9 @@ from app.api.models.character import (
 from app.api.namespaces import create_response, handle_exception
 from app.api.parsers.pagination import pagination_parser, search_parser
 from app.repositories.ai_model_repository import AIModelRepository
+from app.repositories.application_settings_repository import (
+    ApplicationSettingsRepository,
+)
 from app.repositories.character_repository import CharacterRepository
 from app.repositories.chat_session_repository import ChatSessionRepository
 from app.repositories.system_prompt_repository import SystemPromptRepository
@@ -282,6 +285,7 @@ class CharacterItem(Resource):
                 ai_model_repository = AIModelRepository(session)
                 system_prompt_repository = SystemPromptRepository(session)
                 user_profile_repository = UserProfileRepository(session)
+                application_settings_repository = ApplicationSettingsRepository(session)
 
                 character_service = CharacterService(character_repository)
                 chat_session_service = ChatSessionService(
@@ -290,6 +294,7 @@ class CharacterItem(Resource):
                     user_profile_repository,
                     ai_model_repository,
                     system_prompt_repository,
+                    application_settings_repository,
                 )
 
                 # Delete character and its chat sessions

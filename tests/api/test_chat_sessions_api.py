@@ -136,21 +136,16 @@ class TestChatSessionsAPI:
     def test_create_chat_session(
         self, client, mock_chat_session_service, sample_chat_session
     ):
-        """Test creating a new chat session."""
-        # Data to send in request
+        """Test creating a new chat session with defaults."""
+        # Data to send in request - only character_id required now
         session_data = {
             "character_id": 100,
-            "user_profile_id": 200,
-            "ai_model_id": 300,
-            "system_prompt_id": 400,
-            "pre_prompt": "This is a pre-prompt",
-            "pre_prompt_enabled": True,
-            "post_prompt": "This is a post-prompt",
-            "post_prompt_enabled": False,
         }
 
         # Configure the mock
-        mock_chat_session_service.create_session.return_value = sample_chat_session
+        mock_chat_session_service.create_session_with_defaults.return_value = (
+            sample_chat_session
+        )
 
         # Execute API request
         response = client.post(
@@ -167,15 +162,8 @@ class TestChatSessionsAPI:
         assert data["data"]["id"] == sample_chat_session.id
 
         # Verify service was called with correct arguments
-        mock_chat_session_service.create_session.assert_called_once_with(
-            character_id=100,
-            user_profile_id=200,
-            ai_model_id=300,
-            system_prompt_id=400,
-            pre_prompt="This is a pre-prompt",
-            pre_prompt_enabled=True,
-            post_prompt="This is a post-prompt",
-            post_prompt_enabled=False,
+        mock_chat_session_service.create_session_with_defaults.assert_called_once_with(
+            character_id=100
         )
 
     def test_create_chat_session_validation_error(
@@ -184,16 +172,13 @@ class TestChatSessionsAPI:
         """Test validation error when creating a chat session."""
         # Missing required field
         session_data = {
-            "character_id": 100,
-            # user_profile_id is missing
-            "ai_model_id": 300,
-            "system_prompt_id": 400,
+            # character_id is missing
         }
 
         # Configure the mock to raise validation error
-        error_details = {"user_profile_id": "User profile ID is required"}
-        mock_chat_session_service.create_session.side_effect = ValidationError(
-            "Chat session validation failed", details=error_details
+        error_details = {"character_id": "Character ID is required"}
+        mock_chat_session_service.create_session_with_defaults.side_effect = (
+            ValidationError("Chat session validation failed", details=error_details)
         )
 
         # Execute API request
@@ -209,9 +194,7 @@ class TestChatSessionsAPI:
 
         assert data["success"] is False
         assert data["error"]["code"] == "VALIDATION_ERROR"
-        assert (
-            data["error"]["details"]["user_profile_id"] == "User profile ID is required"
-        )
+        assert data["error"]["details"]["character_id"] == "Character ID is required"
 
     def test_update_chat_session(
         self, client, mock_chat_session_service, sample_chat_session

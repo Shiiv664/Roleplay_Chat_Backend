@@ -6,6 +6,9 @@ from typing import Dict, List, Optional
 
 from app.models.chat_session import ChatSession
 from app.repositories.ai_model_repository import AIModelRepository
+from app.repositories.application_settings_repository import (
+    ApplicationSettingsRepository,
+)
 from app.repositories.character_repository import CharacterRepository
 from app.repositories.chat_session_repository import ChatSessionRepository
 from app.repositories.system_prompt_repository import SystemPromptRepository
@@ -29,6 +32,7 @@ class ChatSessionService:
         user_profile_repository: UserProfileRepository,
         ai_model_repository: AIModelRepository,
         system_prompt_repository: SystemPromptRepository,
+        application_settings_repository: ApplicationSettingsRepository,
     ):
         """Initialize the service with repositories.
 
@@ -38,12 +42,14 @@ class ChatSessionService:
             user_profile_repository: Repository for UserProfile data access
             ai_model_repository: Repository for AIModel data access
             system_prompt_repository: Repository for SystemPrompt data access
+            application_settings_repository: Repository for ApplicationSettings data access
         """
         self.repository = chat_session_repository
         self.character_repository = character_repository
         self.user_profile_repository = user_profile_repository
         self.ai_model_repository = ai_model_repository
         self.system_prompt_repository = system_prompt_repository
+        self.application_settings_repository = application_settings_repository
 
     def get_session(self, session_id: int) -> ChatSession:
         """Get a chat session by ID.
@@ -192,6 +198,74 @@ class ChatSessionService:
         logger.info(
             f"Creating chat session for character ID {character_id} "
             f"and user profile ID {user_profile_id}"
+        )
+        return self.repository.create(**session_data)
+
+    def create_session_with_defaults(self, character_id: int) -> ChatSession:
+        """Create a new chat session using application default settings.
+
+        Args:
+            character_id: ID of the character to use in this session
+
+        Returns:
+            ChatSession: The created chat session
+
+        Raises:
+            ResourceNotFoundError: If character doesn't exist or defaults are not configured
+            ValidationError: If validation fails or required defaults are missing
+            DatabaseError: If a database error occurs
+        """
+        # Validate that character exists
+        self.character_repository.get_by_id(character_id)
+
+        # Get application settings for defaults
+        settings = self.application_settings_repository.get_settings()
+
+        # Validate that all required defaults are configured
+        missing_defaults = []
+        if settings.default_user_profile_id is None:
+            missing_defaults.append("default_user_profile_id")
+        if settings.default_ai_model_id is None:
+            missing_defaults.append("default_ai_model_id")
+        if settings.default_system_prompt_id is None:
+            missing_defaults.append("default_system_prompt_id")
+
+        if missing_defaults:
+            raise ValidationError(
+                "Required default settings are not configured",
+                details={
+                    "missing_defaults": missing_defaults,
+                    "message": "Please configure default settings before creating chat sessions",
+                },
+            )
+
+        # Validate that the default entities still exist
+        self._validate_session_entities(
+            character_id,
+            settings.default_user_profile_id,
+            settings.default_ai_model_id,
+            settings.default_system_prompt_id,
+        )
+
+        # Create session with defaults
+        session_data = {
+            "character_id": character_id,
+            "user_profile_id": settings.default_user_profile_id,
+            "ai_model_id": settings.default_ai_model_id,
+            "system_prompt_id": settings.default_system_prompt_id,
+            "pre_prompt": None,
+            "pre_prompt_enabled": False,
+            "post_prompt": None,
+            "post_prompt_enabled": False,
+            "start_time": datetime.utcnow(),
+            "updated_at": datetime.utcnow(),
+        }
+
+        logger.info(
+            f"Creating chat session for character ID {character_id} "
+            f"with default settings (user profile: {settings.default_user_profile_id}, "
+            f"AI model: {settings.default_ai_model_id}, "
+            f"system prompt: {settings.default_system_prompt_id})"
         )
         return self.repository.create(**session_data)
 

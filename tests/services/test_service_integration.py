@@ -58,6 +58,7 @@ class TestServiceIntegration:
             mock_repositories["user_profile_repository"],
             mock_repositories["ai_model_repository"],
             mock_repositories["system_prompt_repository"],
+            mock_repositories["application_settings_repository"],
         )
 
         # Message service

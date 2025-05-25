@@ -1,7 +1,7 @@
 """Tests for the ChatSessionService class."""
 
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 
@@ -39,6 +39,11 @@ class TestChatSessionService:
         return MagicMock()
 
     @pytest.fixture
+    def mock_application_settings_repository(self):
+        """Create a mock application settings repository."""
+        return MagicMock()
+
+    @pytest.fixture
     def service(
         self,
         mock_chat_session_repository,
@@ -46,6 +51,7 @@ class TestChatSessionService:
         mock_user_profile_repository,
         mock_ai_model_repository,
         mock_system_prompt_repository,
+        mock_application_settings_repository,
     ):
         """Create a ChatSessionService with mock repositories."""
         return ChatSessionService(
@@ -54,6 +60,7 @@ class TestChatSessionService:
             mock_user_profile_repository,
             mock_ai_model_repository,
             mock_system_prompt_repository,
+            mock_application_settings_repository,
         )
 
     @pytest.fixture
@@ -332,6 +339,102 @@ class TestChatSessionService:
 
         assert "post_prompt" in excinfo.value.details
         mock_chat_session_repository.create.assert_not_called()
+
+    def test_create_session_with_defaults(
+        self,
+        service,
+        mock_chat_session_repository,
+        mock_character_repository,
+        mock_application_settings_repository,
+        sample_session,
+    ):
+        """Test creating a new chat session with default settings."""
+        # Setup - character exists and defaults are configured
+        mock_character_repository.get_by_id.return_value = MagicMock()
+
+        # Mock application settings with defaults
+        mock_settings = MagicMock()
+        mock_settings.default_user_profile_id = 1
+        mock_settings.default_ai_model_id = 2
+        mock_settings.default_system_prompt_id = 3
+        mock_application_settings_repository.get_settings.return_value = mock_settings
+
+        # Mock validation of default entities
+        service.user_profile_repository.get_by_id.return_value = MagicMock()
+        service.ai_model_repository.get_by_id.return_value = MagicMock()
+        service.system_prompt_repository.get_by_id.return_value = MagicMock()
+
+        mock_chat_session_repository.create.return_value = sample_session
+
+        # Execute
+        with patch("app.services.chat_session_service.datetime") as mock_datetime:
+            mock_datetime.utcnow.return_value = sample_session.start_time
+            result = service.create_session_with_defaults(character_id=5)
+
+        # Verify
+        assert result == sample_session
+        # Character repository is called twice: once for initial validation, once in _validate_session_entities
+        assert mock_character_repository.get_by_id.call_count == 2
+        mock_character_repository.get_by_id.assert_has_calls([call(5), call(5)])
+        mock_application_settings_repository.get_settings.assert_called_once()
+
+        # Verify default entities were validated
+        service.user_profile_repository.get_by_id.assert_called_once_with(1)
+        service.ai_model_repository.get_by_id.assert_called_once_with(2)
+        service.system_prompt_repository.get_by_id.assert_called_once_with(3)
+
+        # Verify session was created with defaults
+        mock_chat_session_repository.create.assert_called_once()
+        call_args = mock_chat_session_repository.create.call_args[1]
+        assert call_args["character_id"] == 5
+        assert call_args["user_profile_id"] == 1
+        assert call_args["ai_model_id"] == 2
+        assert call_args["system_prompt_id"] == 3
+        assert call_args["pre_prompt"] is None
+        assert call_args["pre_prompt_enabled"] is False
+        assert call_args["post_prompt"] is None
+        assert call_args["post_prompt_enabled"] is False
+
+    def test_create_session_with_defaults_missing_defaults(
+        self,
+        service,
+        mock_character_repository,
+        mock_application_settings_repository,
+    ):
+        """Test creating session with defaults when required defaults are missing."""
+        # Setup - character exists but defaults are not configured
+        mock_character_repository.get_by_id.return_value = MagicMock()
+
+        # Mock application settings with missing defaults
+        mock_settings = MagicMock()
+        mock_settings.default_user_profile_id = None
+        mock_settings.default_ai_model_id = 2
+        mock_settings.default_system_prompt_id = 3
+        mock_application_settings_repository.get_settings.return_value = mock_settings
+
+        # Execute and verify
+        with pytest.raises(ValidationError) as excinfo:
+            service.create_session_with_defaults(character_id=5)
+
+        assert "Required default settings are not configured" in str(excinfo.value)
+        assert "default_user_profile_id" in excinfo.value.details["missing_defaults"]
+
+    def test_create_session_with_defaults_character_not_found(
+        self,
+        service,
+        mock_character_repository,
+    ):
+        """Test creating session with defaults when character doesn't exist."""
+        # Setup - character doesn't exist
+        mock_character_repository.get_by_id.side_effect = ResourceNotFoundError(
+            "Character with ID 999 not found"
+        )
+
+        # Execute and verify
+        with pytest.raises(ResourceNotFoundError):
+            service.create_session_with_defaults(character_id=999)
+
+        mock_character_repository.get_by_id.assert_called_once_with(999)
 
     def test_update_session(
         self,
