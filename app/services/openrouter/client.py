@@ -241,6 +241,11 @@ class OpenRouterClient:
 
             response.raise_for_status()
 
+            # Fix encoding issue: OpenRouter sends UTF-8 but declares ISO-8859-1
+            # This must be done before any content is read to prevent corruption
+            if hasattr(response, "encoding") and response.encoding == "ISO-8859-1":
+                response.encoding = "utf-8"
+
             if stream:
                 if DEBUG_OPENROUTER and debug_logger:
                     debug_logger.info("🌊 Starting stream processing...")
