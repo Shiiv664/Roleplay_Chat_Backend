@@ -1,6 +1,6 @@
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.4.0
+  rev: v5.0.0
   hooks:
   - id: trailing-whitespace
     name: Trim trailing whitespace
@@ -10,6 +10,10 @@ repos:
     name: Check YAML
   - id: check-added-large-files
     name: Check for added large files
+  - id: check-merge-conflict
+    name: Check for merge conflicts
+  - id: debug-statements
+    name: Check for debug statements
 
 - repo: local
   hooks:
@@ -18,18 +22,18 @@ repos:
     entry: poetry run black
     language: system
     types: [python]
-    exclude: ^alembic/
+    exclude: ^(alembic/|stubs/)
 
   - id: isort
     name: isort
     entry: poetry run isort
     language: system
     types: [python]
-    exclude: ^alembic/
+    exclude: ^(alembic/|stubs/)
 
   - id: flake8
     name: flake8
     entry: poetry run flake8
     language: system
     types: [python]
-    exclude: ^alembic/
+    exclude: ^(alembic/|stubs/)

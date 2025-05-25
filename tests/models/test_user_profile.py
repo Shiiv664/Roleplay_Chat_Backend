@@ -1,20 +1,19 @@
 """Tests for the UserProfile model using helper functions."""
 
-from sqlalchemy import Integer, String, Text
-
 import pytest
+from sqlalchemy import Integer, String, Text
 from sqlalchemy.exc import IntegrityError
 
 from app.models.base import Base, TimestampMixin
 from app.models.user_profile import UserProfile
 from tests.models.helpers import (
-    check_model_inheritance,
-    check_model_tablename,
-    check_model_columns_existence,
-    check_model_repr,
     check_column_constraints,
-    check_unique_constraint,
+    check_model_columns_existence,
+    check_model_inheritance,
+    check_model_repr,
+    check_model_tablename,
     check_relationship,
+    check_unique_constraint,
 )
 
 
@@ -44,24 +43,22 @@ def test_user_profile_columns():
         "default_in_settings",
     ]
     check_model_columns_existence(UserProfile, expected_columns)
-    
+
     # Test column constraints
     check_column_constraints(
         UserProfile, "id", nullable=False, primary_key=True, column_type=Integer
     )
-    
+
     check_column_constraints(
         UserProfile, "label", nullable=False, unique=True, column_type=String
     )
-    
-    check_column_constraints(
-        UserProfile, "name", nullable=False, column_type=String
-    )
-    
+
+    check_column_constraints(UserProfile, "name", nullable=False, column_type=String)
+
     check_column_constraints(
         UserProfile, "description", nullable=True, column_type=Text
     )
-    
+
     check_column_constraints(
         UserProfile, "avatar_image", nullable=True, column_type=String
     )
@@ -112,16 +109,17 @@ def test_user_profile_required_fields(db_session):
 
 def test_user_profile_unique_constraint(db_session, create_user_profile):
     """Test UserProfile model label uniqueness constraint."""
+
     # Create a function that creates profiles with a specific label
     def create_profile_with_label(label_value):
         return create_user_profile(label=label_value)
-    
+
     # Test the unique constraint on the label field
     check_unique_constraint(
         db_session=db_session,
         model_class=UserProfile,
         create_instance_with_unique=create_profile_with_label,
-        unique_field="label"
+        unique_field="label",
     )
 
 
@@ -143,12 +141,8 @@ def test_user_profile_representation(create_user_profile):
     profile.id = 1  # Set ID manually for testing
 
     # Test representation using helper
-    expected_attrs = {
-        "id": 1,
-        "label": "'test_profile'",
-        "name": "'Test User'"
-    }
-    
+    expected_attrs = {"id": 1, "label": "'test_profile'", "name": "'Test User'"}
+
     check_model_repr(profile, expected_attrs)
 
 
@@ -179,18 +173,18 @@ def test_user_profile_relationships(
         parent_attr="chat_sessions",
         child_attr="user_profile",
         is_collection=True,
-        bidirectional=True
+        bidirectional=True,
     )
-    
+
     # Create a second session to verify multiple relationships
     character2 = create_character(label=f"char_for_user_profile_2_{profile.id}")
     db_session.add(character2)
     db_session.commit()
-    
+
     session2 = create_chat_session(user_profile=profile, character=character2)
     db_session.add(session2)
     db_session.commit()
-    
+
     # Verify multiple sessions
     sessions = profile.chat_sessions.all()
     assert len(sessions) == 2

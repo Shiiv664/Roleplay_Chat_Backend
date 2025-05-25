@@ -87,11 +87,3 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "alembic.*"
 ignore_missing_imports = true
-
-[tool.flake8]
-max-line-length = 88
-extend-ignore = ["E203"]
-exclude = [".git", "__pycache__", "*.pyc", ".tox", ".eggs", "*.egg"]
-per-file-ignores = [
-    "scripts/generate_test_data.py:E501"
-]

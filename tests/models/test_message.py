@@ -2,24 +2,23 @@
 
 import datetime
 
-from sqlalchemy import Integer, Text, DateTime, Enum
-
 import pytest
+from sqlalchemy import DateTime, Enum, Integer, Text
 from sqlalchemy.exc import IntegrityError
 
 from app.models.base import Base
 from app.models.message import Message, MessageRole
 from tests.models.helpers import (
-    check_model_inheritance,
-    check_model_tablename,
-    check_model_columns_existence,
-    check_model_repr,
-    check_column_constraints,
     check_cascade_delete,
-    check_relationship,
-    check_foreign_key_constraint,
-    check_enum_values,
+    check_column_constraints,
     check_enum_field,
+    check_enum_values,
+    check_foreign_key_constraint,
+    check_model_columns_existence,
+    check_model_inheritance,
+    check_model_repr,
+    check_model_tablename,
+    check_relationship,
 )
 
 
@@ -45,27 +44,21 @@ def test_message_columns():
         "chat_session",
     ]
     check_model_columns_existence(Message, expected_columns)
-    
+
     # Test column constraints
     check_column_constraints(
         Message, "id", nullable=False, primary_key=True, column_type=Integer
     )
-    
+
     check_column_constraints(
         Message, "chat_session_id", nullable=False, column_type=Integer
     )
-    
-    check_column_constraints(
-        Message, "role", nullable=False, column_type=Enum
-    )
-    
-    check_column_constraints(
-        Message, "content", nullable=False, column_type=Text
-    )
-    
-    check_column_constraints(
-        Message, "timestamp", nullable=False, column_type=DateTime
-    )
+
+    check_column_constraints(Message, "role", nullable=False, column_type=Enum)
+
+    check_column_constraints(Message, "content", nullable=False, column_type=Text)
+
+    check_column_constraints(Message, "timestamp", nullable=False, column_type=DateTime)
 
 
 def test_message_role_enum():
@@ -163,7 +156,7 @@ def test_message_foreign_key_constraints(db_session, create_chat_session):
     chat_session = create_chat_session()
     db_session.add(chat_session)
     db_session.commit()
-    
+
     # Create a valid Message factory function
     def create_valid_message(**kwargs):
         valid_fields = {
@@ -173,13 +166,13 @@ def test_message_foreign_key_constraints(db_session, create_chat_session):
         }
         valid_fields.update(kwargs)
         return Message(**valid_fields)
-    
+
     # Test chat_session_id foreign key constraint
     check_foreign_key_constraint(
         db_session=db_session,
         model_factory=create_valid_message,
         fk_field="chat_session_id",
-        invalid_id=999999
+        invalid_id=999999,
     )
 
 
@@ -189,22 +182,22 @@ def test_message_role_enum_values(db_session, create_chat_session):
     chat_session = create_chat_session()
     db_session.add(chat_session)
     db_session.commit()
-    
+
     # Create a message creation function for the enum test
     def create_message_with_role(role):
         return Message(
             chat_session_id=chat_session.id,
             role=role,
-            content=f"Message with role {role.value}"
+            content=f"Message with role {role.value}",
         )
-    
+
     # Test all enum values
     check_enum_field(
         db_session=db_session,
         model_class=Message,
         field_name="role",
         enum_class=MessageRole,
-        create_instance=create_message_with_role
+        create_instance=create_message_with_role,
     )
 
 
@@ -232,7 +225,7 @@ def test_message_relationship(db_session, create_chat_session):
         parent_attr="messages",
         child_attr="chat_session",
         is_collection=True,
-        bidirectional=True
+        bidirectional=True,
     )
 
 
@@ -279,7 +272,9 @@ def test_message_cascade_delete_with_chat_session(db_session, create_chat_sessio
 
     # Create message
     message = Message(
-        chat_session_id=chat_session.id, role=MessageRole.USER, content="Test cascade delete"
+        chat_session_id=chat_session.id,
+        role=MessageRole.USER,
+        content="Test cascade delete",
     )
     db_session.add(message)
     db_session.commit()
@@ -291,7 +286,7 @@ def test_message_cascade_delete_with_chat_session(db_session, create_chat_sessio
         child_obj=message,
         parent_attr="messages",
         child_attr="chat_session",
-        child_class=Message
+        child_class=Message,
     )
 
 
@@ -315,7 +310,7 @@ def test_message_representation(db_session, create_chat_session):
     expected_attrs = {
         "id": message.id,
         "chat_session_id": chat_session.id,
-        "role": "user"  # The enum's value
+        "role": "user",  # The enum's value
     }
-    
+
     check_model_repr(message, expected_attrs)

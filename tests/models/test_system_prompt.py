@@ -2,21 +2,20 @@
 
 import datetime
 
-from sqlalchemy import Integer, String, Text, DateTime
-
 import pytest
+from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.exc import IntegrityError
 
 from app.models.base import Base
 from app.models.system_prompt import SystemPrompt
 from tests.models.helpers import (
-    check_model_inheritance,
-    check_model_tablename,
-    check_model_columns_existence,
-    check_model_repr,
     check_column_constraints,
-    check_unique_constraint,
+    check_model_columns_existence,
+    check_model_inheritance,
+    check_model_repr,
+    check_model_tablename,
     check_relationship,
+    check_unique_constraint,
 )
 
 
@@ -43,20 +42,18 @@ def test_system_prompt_columns():
         "default_in_settings",
     ]
     check_model_columns_existence(SystemPrompt, expected_columns)
-    
+
     # Test column constraints
     check_column_constraints(
         SystemPrompt, "id", nullable=False, primary_key=True, column_type=Integer
     )
-    
+
     check_column_constraints(
         SystemPrompt, "label", nullable=False, unique=True, column_type=String
     )
-    
-    check_column_constraints(
-        SystemPrompt, "content", nullable=False, column_type=Text
-    )
-    
+
+    check_column_constraints(SystemPrompt, "content", nullable=False, column_type=Text)
+
     # Check created_at with default
     check_column_constraints(
         SystemPrompt, "created_at", nullable=False, column_type=DateTime
@@ -103,16 +100,17 @@ def test_system_prompt_required_fields(db_session):
 
 def test_system_prompt_unique_constraint(db_session, create_system_prompt):
     """Test SystemPrompt model label uniqueness constraint."""
+
     # Create a function that creates prompts with a specific label
     def create_prompt_with_label(label_value):
         return create_system_prompt(label=label_value)
-    
+
     # Test the unique constraint on the label field
     check_unique_constraint(
         db_session=db_session,
         model_class=SystemPrompt,
         create_instance_with_unique=create_prompt_with_label,
-        unique_field="label"
+        unique_field="label",
     )
 
 
@@ -139,11 +137,8 @@ def test_system_prompt_representation(create_system_prompt):
     prompt.id = 1  # Set ID manually for testing
 
     # Test representation using helper
-    expected_attrs = {
-        "id": 1,
-        "label": "'test_prompt'"
-    }
-    
+    expected_attrs = {"id": 1, "label": "'test_prompt'"}
+
     check_model_repr(prompt, expected_attrs)
 
 
@@ -174,18 +169,18 @@ def test_system_prompt_relationships(
         parent_attr="chat_sessions",
         child_attr="system_prompt",
         is_collection=True,
-        bidirectional=True
+        bidirectional=True,
     )
-    
+
     # Create a second session to verify multiple relationships
     character2 = create_character(label=f"char_for_prompt_2_{prompt.id}")
     db_session.add(character2)
     db_session.commit()
-    
+
     session2 = create_chat_session(system_prompt=prompt, character=character2)
     db_session.add(session2)
     db_session.commit()
-    
+
     # Verify multiple sessions
     sessions = prompt.chat_sessions.all()
     assert len(sessions) == 2

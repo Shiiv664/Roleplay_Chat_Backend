@@ -11,17 +11,17 @@ The LLM Roleplay Chat Client has configurable debug logging to help with develop
 - Minimal, focused output
 - File: `logs/openrouter_payload.log`
 
-### `DEBUG_OPENROUTER=true` 
+### `DEBUG_OPENROUTER=true`
 **Full OpenRouter debugging**
 - Comprehensive logging of all OpenRouter API interactions
 - Includes headers, response status, streaming chunks
-- Verbose output for deep troubleshooting  
+- Verbose output for deep troubleshooting
 - File: `logs/openrouter_debug.log`
 
 ### `DEBUG_MESSAGE_SERVICE=true`
 **Message service debugging**
 - System prompt construction details
-- Message history formatting  
+- Message history formatting
 - Database operations
 - File: `logs/message_service_debug.log`
 
@@ -41,7 +41,7 @@ tail -f logs/openrouter_payload.log
 ```bash
 # Enable all debug logging
 export DEBUG_OPENROUTER=true
-export DEBUG_MESSAGE_SERVICE=true  
+export DEBUG_MESSAGE_SERVICE=true
 export LOG_OPENROUTER_PAYLOAD=true
 ./venv/bin/python app.py
 ```
@@ -56,7 +56,7 @@ export LOG_OPENROUTER_PAYLOAD=true
 
 When debug logging is enabled, files are created in:
 - `logs/openrouter_payload.log` - Clean JSON payloads only
-- `logs/openrouter_debug.log` - Full OpenRouter API debugging  
+- `logs/openrouter_debug.log` - Full OpenRouter API debugging
 - `logs/message_service_debug.log` - Message service debugging
 
 ## Sample Output
@@ -69,7 +69,7 @@ When debug logging is enabled, files are created in:
   "model": "gpt-3.5-turbo",
   "messages": [
     {
-      "role": "system", 
+      "role": "system",
       "content": "You are roleplaying as the character described..."
     },
     {

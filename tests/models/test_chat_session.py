@@ -2,23 +2,22 @@
 
 import datetime
 
-from sqlalchemy import Integer, String, Text, DateTime, Boolean, ForeignKey
-
 import pytest
+from sqlalchemy import Boolean, DateTime, Integer, Text
 from sqlalchemy.exc import IntegrityError
 
 from app.models.base import Base
 from app.models.chat_session import ChatSession
 from app.models.message import Message, MessageRole
 from tests.models.helpers import (
-    check_model_inheritance,
-    check_model_tablename,
-    check_model_columns_existence,
-    check_model_repr,
-    check_column_constraints,
     check_cascade_delete,
-    check_relationship,
+    check_column_constraints,
     check_foreign_key_constraint,
+    check_model_columns_existence,
+    check_model_inheritance,
+    check_model_repr,
+    check_model_tablename,
+    check_relationship,
 )
 
 
@@ -54,50 +53,48 @@ def test_chat_session_columns():
         "messages",
     ]
     check_model_columns_existence(ChatSession, expected_columns)
-    
+
     # Test primary key and timestamp columns
     check_column_constraints(
         ChatSession, "id", nullable=False, primary_key=True, column_type=Integer
     )
-    
+
     check_column_constraints(
         ChatSession, "start_time", nullable=False, column_type=DateTime
     )
-    
+
     check_column_constraints(
         ChatSession, "updated_at", nullable=False, column_type=DateTime
     )
-    
+
     # Test foreign key columns
     check_column_constraints(
         ChatSession, "character_id", nullable=False, column_type=Integer
     )
-    
+
     check_column_constraints(
         ChatSession, "user_profile_id", nullable=False, column_type=Integer
     )
-    
+
     check_column_constraints(
         ChatSession, "ai_model_id", nullable=False, column_type=Integer
     )
-    
+
     check_column_constraints(
         ChatSession, "system_prompt_id", nullable=False, column_type=Integer
     )
-    
+
     # Test optional fields
-    check_column_constraints(
-        ChatSession, "pre_prompt", nullable=True, column_type=Text
-    )
-    
+    check_column_constraints(ChatSession, "pre_prompt", nullable=True, column_type=Text)
+
     check_column_constraints(
         ChatSession, "pre_prompt_enabled", nullable=False, column_type=Boolean
     )
-    
+
     check_column_constraints(
         ChatSession, "post_prompt", nullable=True, column_type=Text
     )
-    
+
     check_column_constraints(
         ChatSession, "post_prompt_enabled", nullable=False, column_type=Boolean
     )
@@ -271,7 +268,7 @@ def test_chat_session_foreign_key_constraints(
         db_session=db_session,
         model_factory=create_valid_session,
         fk_field="character_id",
-        invalid_id=999999
+        invalid_id=999999,
     )
 
     # Test user_profile_id foreign key constraint
@@ -279,7 +276,7 @@ def test_chat_session_foreign_key_constraints(
         db_session=db_session,
         model_factory=create_valid_session,
         fk_field="user_profile_id",
-        invalid_id=999999
+        invalid_id=999999,
     )
 
     # Test ai_model_id foreign key constraint
@@ -287,7 +284,7 @@ def test_chat_session_foreign_key_constraints(
         db_session=db_session,
         model_factory=create_valid_session,
         fk_field="ai_model_id",
-        invalid_id=999999
+        invalid_id=999999,
     )
 
     # Test system_prompt_id foreign key constraint
@@ -295,7 +292,7 @@ def test_chat_session_foreign_key_constraints(
         db_session=db_session,
         model_factory=create_valid_session,
         fk_field="system_prompt_id",
-        invalid_id=999999
+        invalid_id=999999,
     )
 
 
@@ -393,7 +390,7 @@ def test_chat_session_message_relationship(
         parent_attr="messages",
         child_attr="chat_session",
         is_collection=True,
-        bidirectional=True
+        bidirectional=True,
     )
 
     # Create another message
@@ -462,7 +459,7 @@ def test_chat_session_cascade_delete(
         child_obj=message,
         parent_attr="messages",
         child_attr="chat_session",
-        child_class=Message
+        child_class=Message,
     )
 
 
@@ -501,7 +498,7 @@ def test_chat_session_cascade_delete_with_character(
         child_obj=chat_session,
         parent_attr="chat_sessions",
         child_attr="character",
-        child_class=ChatSession
+        child_class=ChatSession,
     )
 
 
@@ -537,7 +534,7 @@ def test_chat_session_representation(
     expected_attrs = {
         "id": chat_session.id,
         "character_id": character.id,
-        "user_profile_id": user_profile.id
+        "user_profile_id": user_profile.id,
     }
-    
+
     check_model_repr(chat_session, expected_attrs)

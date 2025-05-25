@@ -2,21 +2,20 @@
 
 import datetime
 
-from sqlalchemy import Integer, String, Text, DateTime
-
 import pytest
+from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.exc import IntegrityError
 
 from app.models.ai_model import AIModel
 from app.models.base import Base
 from tests.models.helpers import (
-    check_model_inheritance,
-    check_model_tablename,
-    check_model_columns_existence,
-    check_model_repr,
     check_column_constraints,
-    check_unique_constraint,
+    check_model_columns_existence,
+    check_model_inheritance,
+    check_model_repr,
+    check_model_tablename,
     check_relationship,
+    check_unique_constraint,
 )
 
 
@@ -43,20 +42,18 @@ def test_ai_model_columns():
         "default_in_settings",
     ]
     check_model_columns_existence(AIModel, expected_columns)
-    
+
     # Test column constraints
     check_column_constraints(
         AIModel, "id", nullable=False, primary_key=True, column_type=Integer
     )
-    
+
     check_column_constraints(
         AIModel, "label", nullable=False, unique=True, column_type=String
     )
-    
-    check_column_constraints(
-        AIModel, "description", nullable=True, column_type=Text
-    )
-    
+
+    check_column_constraints(AIModel, "description", nullable=True, column_type=Text)
+
     # Check created_at with default
     check_column_constraints(
         AIModel, "created_at", nullable=False, column_type=DateTime
@@ -95,16 +92,17 @@ def test_ai_model_required_fields(db_session):
 
 def test_ai_model_unique_constraint(db_session, create_ai_model):
     """Test AIModel model label uniqueness constraint."""
+
     # Create a function that creates models with a specific label
     def create_model_with_label(label_value):
         return create_ai_model(label=label_value)
-    
+
     # Test the unique constraint on the label field
     check_unique_constraint(
         db_session=db_session,
         model_class=AIModel,
         create_instance_with_unique=create_model_with_label,
-        unique_field="label"
+        unique_field="label",
     )
 
 
@@ -143,11 +141,8 @@ def test_ai_model_representation(create_ai_model):
     ai_model.id = 1  # Set ID manually for testing
 
     # Test representation using helper
-    expected_attrs = {
-        "id": 1,
-        "label": "'test_model'"
-    }
-    
+    expected_attrs = {"id": 1, "label": "'test_model'"}
+
     check_model_repr(ai_model, expected_attrs)
 
 
@@ -178,18 +173,18 @@ def test_ai_model_relationships(
         parent_attr="chat_sessions",
         child_attr="ai_model",
         is_collection=True,
-        bidirectional=True
+        bidirectional=True,
     )
-    
+
     # Create a second session to verify multiple relationships
     character2 = create_character(label=f"char_for_ai_model_2_{ai_model.id}")
     db_session.add(character2)
     db_session.commit()
-    
+
     session2 = create_chat_session(ai_model=ai_model, character=character2)
     db_session.add(session2)
     db_session.commit()
-    
+
     # Verify multiple sessions
     sessions = ai_model.chat_sessions.all()
     assert len(sessions) == 2

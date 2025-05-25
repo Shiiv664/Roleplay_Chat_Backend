@@ -1,4 +1,19 @@
 [flake8]
 max-line-length = 88
-extend-ignore = E203, E402, I100, I101, I201, I202, D401, E501
-exclude = .git,__pycache__,dist,build,.venv,alembic
+extend-ignore = E203, E402, E501, W503, D202, D401, I100, I101, I201, I202, F401
+exclude =
+    .git,
+    __pycache__,
+    dist,
+    build,
+    .venv,
+    venv,
+    alembic,
+    stubs,
+    scripts,
+    .pytest_cache,
+    *.egg-info
+per-file-ignores =
+    tests/*:F401,F811
+    __init__.py:F401
+    app.py:F401

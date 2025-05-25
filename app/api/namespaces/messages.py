@@ -80,10 +80,10 @@ def get_message_service() -> MessageService:
     # Create settings service
     settings_repo = ApplicationSettingsRepository(db_session)
     settings_service = ApplicationSettingsService(
-        settings_repo, 
+        settings_repo,
         AIModelRepository(db_session),
-        SystemPromptRepository(db_session), 
-        UserProfileRepository(db_session)
+        SystemPromptRepository(db_session),
+        UserProfileRepository(db_session),
     )
 
     # Create OpenRouter client with API key

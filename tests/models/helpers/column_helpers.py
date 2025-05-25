@@ -153,7 +153,7 @@ def check_enum_field(db_session, model_class, field_name, enum_class, create_ins
 
 def check_enum_values(enum_class, expected_values):
     """Test that an Enum class has the expected values.
-    
+
     Args:
         enum_class: The Enum class to test
         expected_values: Dictionary of expected values (name: value)
@@ -161,7 +161,11 @@ def check_enum_values(enum_class, expected_values):
     # Check that all expected values are in the enum
     for name, value in expected_values.items():
         assert hasattr(enum_class, name), f"Enum missing member {name}"
-        assert getattr(enum_class, name).value == value, f"Expected {name}={value}, got {getattr(enum_class, name).value}"
-    
+        assert (
+            getattr(enum_class, name).value == value
+        ), f"Expected {name}={value}, got {getattr(enum_class, name).value}"
+
     # Check that there are no unexpected values
-    assert len(enum_class) == len(expected_values), f"Enum has {len(enum_class)} members, expected {len(expected_values)}"
+    assert len(enum_class) == len(
+        expected_values
+    ), f"Enum has {len(enum_class)} members, expected {len(expected_values)}"

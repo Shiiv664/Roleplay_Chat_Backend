@@ -1,7 +1,6 @@
 """Main application entry point."""
 
 import logging
-import os
 from pathlib import Path
 
 from flask import Flask, jsonify, request, send_from_directory
