@@ -92,9 +92,7 @@ class TestSendMessageEndpoint:
         assert data["error"] == "SERVICE_UNAVAILABLE"
         assert "api key not configured" in data["message"].lower()
 
-    @patch(
-        "app.services.openrouter.client.OpenRouterClient.create_streaming_completion"
-    )
+    @patch("app.services.openrouter.client.OpenRouterClient.chat_completion_stream")
     @patch(
         "app.services.application_settings_service.ApplicationSettingsService.get_openrouter_api_key"
     )
@@ -111,7 +109,7 @@ class TestSendMessageEndpoint:
         mock_get_api_key.return_value = "test-api-key"
 
         # Mock streaming response
-        async def mock_stream():
+        def mock_stream():
             chunks = [
                 {"choices": [{"delta": {"content": "Hello"}}]},
                 {"choices": [{"delta": {"content": " from"}}]},
@@ -159,9 +157,7 @@ class TestSendMessageEndpoint:
         assert messages[1].role == MessageRole.ASSISTANT
         assert messages[1].content == "Hello from Bob!"
 
-    @patch(
-        "app.services.openrouter.client.OpenRouterClient.create_streaming_completion"
-    )
+    @patch("app.services.openrouter.client.OpenRouterClient.chat_completion_stream")
     @patch(
         "app.services.application_settings_service.ApplicationSettingsService.get_openrouter_api_key"
     )
@@ -177,7 +173,7 @@ class TestSendMessageEndpoint:
         mock_get_api_key.return_value = "test-api-key"
 
         # Mock streaming that raises error
-        async def mock_stream():
+        def mock_stream():
             yield {"choices": [{"delta": {"content": "Partial"}}]}
             raise Exception("Stream error")
 
@@ -272,7 +268,7 @@ class TestSendMessageEndpoint:
 
         # Mock the OpenRouter call to capture the messages sent
         with patch(
-            "app.services.openrouter.client.OpenRouterClient.create_streaming_completion"
+            "app.services.openrouter.client.OpenRouterClient.chat_completion_stream"
         ) as mock_streaming:
             with patch(
                 "app.services.application_settings_service.ApplicationSettingsService.get_openrouter_api_key"
@@ -280,7 +276,7 @@ class TestSendMessageEndpoint:
                 mock_key.return_value = "test-key"
 
                 # Setup mock to capture call arguments
-                async def mock_stream():
+                def mock_stream():
                     yield {"choices": [{"delta": {"content": "Response"}}]}
 
                 mock_streaming.return_value = mock_stream()

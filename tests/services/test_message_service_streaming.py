@@ -198,14 +198,13 @@ class TestFormatMessagesForOpenRouter:
 class TestGenerateStreamingResponse:
     """Test cases for generate_streaming_response method."""
 
-    @pytest.mark.asyncio
-    async def test_streaming_response_success(self, db_session):
+    def test_streaming_response_success(self, db_session):
         """Test successful streaming response generation."""
         # Mock dependencies
         message_repo = Mock()
         chat_session_repo = Mock()
         settings_service = Mock()
-        openrouter_client = AsyncMock()
+        openrouter_client = Mock()
 
         # Mock settings
         settings_service.get_openrouter_api_key.return_value = "test-api-key"
@@ -223,7 +222,7 @@ class TestGenerateStreamingResponse:
         message_repo.get_by_chat_session_id.return_value = []
 
         # Mock streaming response
-        async def mock_stream():
+        def mock_stream():
             chunks = [
                 {"choices": [{"delta": {"content": "Hello"}}]},
                 {"choices": [{"delta": {"content": " world"}}]},
@@ -232,8 +231,8 @@ class TestGenerateStreamingResponse:
             for chunk in chunks:
                 yield chunk
 
-        # Make create_streaming_completion return the generator directly
-        openrouter_client.create_streaming_completion = Mock(return_value=mock_stream())
+        # Make chat_completion_stream return the generator directly
+        openrouter_client.chat_completion_stream = Mock(return_value=mock_stream())
 
         # Mock create_assistant_message
         message_repo.create = Mock(return_value=Mock(id=1))
@@ -248,7 +247,7 @@ class TestGenerateStreamingResponse:
 
         # Collect streamed chunks
         chunks = []
-        async for chunk in service.generate_streaming_response(1, "Test", 1):
+        for chunk in service.generate_streaming_response(1, "Test", 1):
             chunks.append(chunk)
 
         # Verify
@@ -258,8 +257,7 @@ class TestGenerateStreamingResponse:
         assert saved_message["content"] == "Hello world!"
         assert saved_message["role"] == MessageRole.ASSISTANT
 
-    @pytest.mark.asyncio
-    async def test_streaming_response_no_api_key(self):
+    def test_streaming_response_no_api_key(self):
         """Test streaming response with missing API key."""
         settings_service = Mock()
         settings_service.get_openrouter_api_key.return_value = None
@@ -271,11 +269,10 @@ class TestGenerateStreamingResponse:
         with pytest.raises(
             BusinessRuleError, match="OpenRouter API key not configured"
         ):
-            async for _ in service.generate_streaming_response(1, "Test", 1):
+            for _ in service.generate_streaming_response(1, "Test", 1):
                 pass
 
-    @pytest.mark.asyncio
-    async def test_streaming_response_no_ai_model(self):
+    def test_streaming_response_no_ai_model(self):
         """Test streaming response with missing AI model."""
         settings_service = Mock()
         settings_service.get_openrouter_api_key.return_value = "key"
@@ -293,17 +290,16 @@ class TestGenerateStreamingResponse:
         )
 
         with pytest.raises(BusinessRuleError, match="AI model not configured"):
-            async for _ in service.generate_streaming_response(1, "Test", 1):
+            for _ in service.generate_streaming_response(1, "Test", 1):
                 pass
 
-    @pytest.mark.asyncio
-    async def test_streaming_response_error_handling(self):
+    def test_streaming_response_error_handling(self):
         """Test error handling during streaming."""
         # Mock dependencies
         message_repo = Mock()
         chat_session_repo = Mock()
         settings_service = Mock()
-        openrouter_client = AsyncMock()
+        openrouter_client = Mock()
 
         settings_service.get_openrouter_api_key.return_value = "key"
 
@@ -319,12 +315,12 @@ class TestGenerateStreamingResponse:
         message_repo.get_by_chat_session_id.return_value = []
 
         # Mock streaming that raises error after some chunks
-        async def mock_stream():
+        def mock_stream():
             yield {"choices": [{"delta": {"content": "Partial"}}]}
             raise Exception("Stream error")
 
-        # Make create_streaming_completion return the generator directly
-        openrouter_client.create_streaming_completion = Mock(return_value=mock_stream())
+        # Make chat_completion_stream return the generator directly
+        openrouter_client.chat_completion_stream = Mock(return_value=mock_stream())
         message_repo.create = Mock(return_value=Mock(id=1))
 
         service = MessageService(
@@ -337,7 +333,7 @@ class TestGenerateStreamingResponse:
         # Collect chunks and expect error
         chunks = []
         with pytest.raises(Exception, match="Stream error"):
-            async for chunk in service.generate_streaming_response(1, "Test", 1):
+            for chunk in service.generate_streaming_response(1, "Test", 1):
                 chunks.append(chunk)
 
         # Verify partial response was saved with error message
