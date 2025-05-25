@@ -67,6 +67,7 @@ cover/
 # Log files
 *.log
 logs/
+debug_logs/
 
 # Environment variables
 .env

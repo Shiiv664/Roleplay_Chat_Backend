@@ -282,14 +282,8 @@ class SendMessageResource(Resource):
             # Get services
             message_service = get_message_service()
 
-            # Save user message and commit it
-            user_message = message_service.create_user_message(chat_session_id, content)
-            try:
-                message_service.repository.session.commit()
-            except Exception as e:
-                message_service.repository.session.rollback()
-                logger.error(f"Failed to save user message: {e}")
-                raise BusinessRuleError("Failed to save user message")
+            # Don't save user message yet - let the streaming method handle it
+            # to avoid duplication in the message history
 
             if stream:
                 # Import SSE utilities
@@ -305,7 +299,7 @@ class SendMessageResource(Resource):
                         for chunk in message_service.generate_streaming_response(
                             chat_session_id=chat_session_id,
                             user_message=content,
-                            user_message_id=user_message.id,
+                            user_message_id=None,  # Will be set by the streaming method
                         ):
                             yield format_content_event(chunk)
                         yield format_done_event()

@@ -1,6 +1,9 @@
 """Service for Message entity operations."""
 
 import logging
+import os
+from datetime import datetime
+from pathlib import Path
 from typing import AsyncGenerator, Dict, Iterator, List, Optional, Tuple
 
 from app.models.chat_session import ChatSession
@@ -12,6 +15,25 @@ from app.services.openrouter.client import OpenRouterClient
 from app.utils.exceptions import BusinessRuleError, ValidationError
 
 logger = logging.getLogger(__name__)
+
+# Debug logging - controlled by environment variable
+DEBUG_MESSAGE_SERVICE = os.getenv('DEBUG_MESSAGE_SERVICE', 'false').lower() == 'true'
+
+if DEBUG_MESSAGE_SERVICE:
+    # Set up debug logging for message service
+    debug_logger = logging.getLogger('message_service_debug')
+    debug_logger.setLevel(logging.DEBUG)
+    
+    logs_dir = Path('logs')
+    logs_dir.mkdir(exist_ok=True)
+    
+    debug_handler = logging.FileHandler(logs_dir / 'message_service_debug.log')
+    debug_handler.setLevel(logging.DEBUG)
+    debug_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    debug_handler.setFormatter(debug_formatter)
+    debug_logger.addHandler(debug_handler)
+else:
+    debug_logger = None
 
 
 class MessageService:
@@ -402,30 +424,62 @@ class MessageService:
             ---
             [user_profile.description]
         """
+        if DEBUG_MESSAGE_SERVICE and debug_logger:
+            debug_logger.info("🔧 BUILDING SYSTEM PROMPT")
+            debug_logger.info(f"Session ID: {chat_session.id}")
+        
         prompt_parts = []
 
         # Add pre-prompt if enabled
         if chat_session.pre_prompt_enabled and chat_session.pre_prompt:
+            if DEBUG_MESSAGE_SERVICE and debug_logger:
+                debug_logger.info(f"➕ Adding pre-prompt: {chat_session.pre_prompt[:100]}...")
             prompt_parts.append(chat_session.pre_prompt.strip())
+        else:
+            if DEBUG_MESSAGE_SERVICE and debug_logger:
+                debug_logger.info("❌ Pre-prompt disabled or empty")
 
         # Add system prompt
         if chat_session.system_prompt and chat_session.system_prompt.content:
+            if DEBUG_MESSAGE_SERVICE and debug_logger:
+                debug_logger.info(f"➕ Adding system prompt: {chat_session.system_prompt.content[:100]}...")
             prompt_parts.append(chat_session.system_prompt.content.strip())
+        else:
+            logger.warning("No system prompt content available for chat session")
+            if DEBUG_MESSAGE_SERVICE and debug_logger:
+                debug_logger.warning("⚠️ No system prompt content available")
 
         # Add character description
         if chat_session.character and chat_session.character.description:
+            if DEBUG_MESSAGE_SERVICE and debug_logger:
+                debug_logger.info(f"🎭 Adding character ({chat_session.character.name}): {chat_session.character.description[:100]}...")
             prompt_parts.append(chat_session.character.description.strip())
         else:
+            if DEBUG_MESSAGE_SERVICE and debug_logger:
+                debug_logger.info("👤 No character description - using default")
             prompt_parts.append("No character description provided")
 
         # Add user profile description
         if chat_session.user_profile and chat_session.user_profile.description:
+            if DEBUG_MESSAGE_SERVICE and debug_logger:
+                debug_logger.info(f"👤 Adding user profile ({chat_session.user_profile.name}): {chat_session.user_profile.description[:100]}...")
             prompt_parts.append(chat_session.user_profile.description.strip())
         else:
+            if DEBUG_MESSAGE_SERVICE and debug_logger:
+                debug_logger.info("👤 No user profile description - using default")
             prompt_parts.append("No user description provided")
 
         # Join with separator
-        return "\n---\n".join(prompt_parts)
+        final_prompt = "\n---\n".join(prompt_parts)
+        
+        # Log the complete system prompt only in debug mode
+        if DEBUG_MESSAGE_SERVICE and debug_logger:
+            debug_logger.info("✅ COMPLETE SYSTEM PROMPT BUILT:")
+            debug_logger.info("=" * 60)
+            debug_logger.info(final_prompt)
+            debug_logger.info("=" * 60)
+        
+        return final_prompt
 
     def format_messages_for_openrouter(
         self, chat_session_id: int, new_user_message: str
@@ -445,33 +499,70 @@ class MessageService:
             3. Post-prompt (if enabled) as system message
             4. New user message
         """
+        # Essential logging (always enabled)
+        logger.info(f"Formatting messages for OpenRouter - Chat Session: {chat_session_id}")
+        
+        # Debug logging (only when DEBUG_MESSAGE_SERVICE=true)
+        if DEBUG_MESSAGE_SERVICE and debug_logger:
+            debug_logger.info("📝 FORMATTING MESSAGES FOR OPENROUTER")
+            debug_logger.info(f"Chat Session ID: {chat_session_id}")
+            debug_logger.info(f"New User Message: {new_user_message[:200]}...")
+        
         # Get chat session with all relationships
         chat_session = self.chat_session_repository.get_by_id_with_relations(
             chat_session_id
         )
+        
+        if DEBUG_MESSAGE_SERVICE and debug_logger:
+            debug_logger.info(f"📋 Loaded chat session: {chat_session.id}")
+            debug_logger.info(f"🤖 AI Model: {chat_session.ai_model.label if chat_session.ai_model else 'None'}")
+            debug_logger.info(f"🎭 Character: {chat_session.character.name if chat_session.character else 'None'}")
+            debug_logger.info(f"👤 User Profile: {chat_session.user_profile.name if chat_session.user_profile else 'None'}")
 
         # Build system prompt
         system_prompt = self.build_system_prompt(chat_session)
 
         # Start with system message
         messages = [{"role": "system", "content": system_prompt}]
+        if DEBUG_MESSAGE_SERVICE and debug_logger:
+            debug_logger.info("✅ Added system message")
 
         # Get all historical messages
         history = self.repository.get_by_chat_session_id(chat_session_id)
+        logger.info(f"Found {len(history)} historical messages")
+        if DEBUG_MESSAGE_SERVICE and debug_logger:
+            debug_logger.info(f"📚 Found {len(history)} historical messages")
 
         # Add historical messages
-        for msg in history:
+        for i, msg in enumerate(history):
             messages.append({"role": msg.role.value, "content": msg.content})
+            if DEBUG_MESSAGE_SERVICE and debug_logger:
+                debug_logger.info(f"  📖 History {i+1}: {msg.role.value} - {msg.content[:100]}...")
 
         # Add post-prompt if enabled
         if chat_session.post_prompt_enabled and chat_session.post_prompt:
             messages.append(
                 {"role": "system", "content": chat_session.post_prompt.strip()}
             )
+            if DEBUG_MESSAGE_SERVICE and debug_logger:
+                debug_logger.info(f"➕ Added post-prompt: {chat_session.post_prompt[:100]}...")
+        else:
+            if DEBUG_MESSAGE_SERVICE and debug_logger:
+                debug_logger.info("❌ Post-prompt disabled or empty")
 
         # Add new user message
         messages.append({"role": "user", "content": new_user_message})
+        if DEBUG_MESSAGE_SERVICE and debug_logger:
+            debug_logger.info("➕ Added new user message")
 
+        logger.info(f"Formatted {len(messages)} messages for OpenRouter")
+        if DEBUG_MESSAGE_SERVICE and debug_logger:
+            debug_logger.info(f"📊 FINAL MESSAGE COUNT: {len(messages)}")
+            debug_logger.info("🔍 COMPLETE MESSAGE ARRAY:")
+            for i, msg in enumerate(messages):
+                debug_logger.info(f"  Message {i+1} ({msg['role']}):")
+                debug_logger.info(f"    {msg['content'][:300]}{'...' if len(msg['content']) > 300 else ''}")
+            
         return messages
 
     def generate_streaming_response(
@@ -524,6 +615,20 @@ class MessageService:
 
         # Format messages for OpenRouter
         messages = self.format_messages_for_openrouter(chat_session_id, user_message)
+
+        # Save the user message to database before streaming
+        user_message_obj = self.create_user_message(chat_session_id, user_message)
+        try:
+            self.repository.session.commit()
+            logger.info(f"Saved user message to database")
+            if DEBUG_MESSAGE_SERVICE and debug_logger:
+                debug_logger.info(f"✅ Saved user message to database: {user_message_obj.id}")
+        except Exception as commit_error:
+            self.repository.session.rollback()
+            logger.error(f"Failed to save user message: {commit_error}")
+            if DEBUG_MESSAGE_SERVICE and debug_logger:
+                debug_logger.error(f"❌ Failed to save user message: {commit_error}")
+            raise BusinessRuleError("Failed to save user message")
 
         # Accumulate response for saving
         accumulated_response = ""
