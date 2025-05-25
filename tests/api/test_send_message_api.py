@@ -53,44 +53,56 @@ class TestSendMessageEndpoint:
         return chat_session
 
     def test_send_message_validation_error(
-        self, client, chat_session_with_relationships
+        self, client, chat_session_with_relationships, db_session
     ):
         """Test sending message with validation error."""
-        response = client.post(
-            f"/api/messages/chat-sessions/{chat_session_with_relationships.id}/send-message",
-            json={"content": "", "stream": True},
-        )
+        from unittest.mock import Mock, patch
 
-        assert response.status_code == 400
-        data = json.loads(response.data)
+        # Mock the get_message_service function to avoid database issues
+        mock_service = Mock()
+        with patch(
+            "app.api.namespaces.messages.get_message_service", return_value=mock_service
+        ):
+            response = client.post(
+                f"/api/v1/messages/chat-sessions/{chat_session_with_relationships.id}/send-message",
+                json={"content": "", "stream": True},
+            )
+
+            # Debug: print response details
+            print(f"Status: {response.status_code}")
+            print(f"Data: {response.data}")
+            print(f"Headers: {dict(response.headers)}")
+
+            assert response.status_code == 400
+            data = json.loads(response.data)
         assert data["success"] is False
-        assert data["error"] == "VALIDATION_ERROR"
-        assert "content is required" in data["message"].lower()
+        assert data["error"]["code"] == "VALIDATION_ERROR"
+        assert "content is required" in data["error"]["message"].lower()
 
     def test_send_message_chat_session_not_found(self, client):
         """Test sending message to non-existent chat session."""
         response = client.post(
-            "/api/messages/chat-sessions/99999/send-message",
+            "/api/v1/messages/chat-sessions/99999/send-message",
             json={"content": "Hello", "stream": True},
         )
 
         assert response.status_code == 404
         data = json.loads(response.data)
         assert data["success"] is False
-        assert data["error"] == "RESOURCE_NOT_FOUND"
+        assert data["error"]["code"] == "RESOURCE_NOT_FOUND"
 
     def test_send_message_no_api_key(self, client, chat_session_with_relationships):
         """Test sending message without OpenRouter API key configured."""
         response = client.post(
-            f"/api/messages/chat-sessions/{chat_session_with_relationships.id}/send-message",
+            f"/api/v1/messages/chat-sessions/{chat_session_with_relationships.id}/send-message",
             json={"content": "Hello", "stream": True},
         )
 
         assert response.status_code == 503
         data = json.loads(response.data)
         assert data["success"] is False
-        assert data["error"] == "SERVICE_UNAVAILABLE"
-        assert "api key not configured" in data["message"].lower()
+        assert data["error"]["code"] == "SERVICE_UNAVAILABLE"
+        assert "api key not configured" in data["error"]["message"].lower()
 
     @patch("app.services.openrouter.client.OpenRouterClient.chat_completion_stream")
     @patch(
@@ -122,13 +134,13 @@ class TestSendMessageEndpoint:
 
         # Send request
         response = client.post(
-            f"/api/messages/chat-sessions/{chat_session_with_relationships.id}/send-message",
+            f"/api/v1/messages/chat-sessions/{chat_session_with_relationships.id}/send-message",
             json={"content": "Hi there!", "stream": True},
         )
 
         # Check response
         assert response.status_code == 200
-        assert response.content_type == "text/event-stream"
+        assert response.content_type.startswith("text/event-stream")
 
         # Parse SSE events
         events = []
@@ -180,12 +192,12 @@ class TestSendMessageEndpoint:
         mock_streaming.return_value = mock_stream()
 
         response = client.post(
-            f"/api/messages/chat-sessions/{chat_session_with_relationships.id}/send-message",
+            f"/api/v1/messages/chat-sessions/{chat_session_with_relationships.id}/send-message",
             json={"content": "Test", "stream": True},
         )
 
         assert response.status_code == 200
-        assert response.content_type == "text/event-stream"
+        assert response.content_type.startswith("text/event-stream")
 
         # Parse events
         events = []
@@ -216,7 +228,7 @@ class TestSendMessageEndpoint:
     ):
         """Test non-streaming mode returns not implemented error."""
         response = client.post(
-            f"/api/messages/chat-sessions/{chat_session_with_relationships.id}/send-message",
+            f"/api/v1/messages/chat-sessions/{chat_session_with_relationships.id}/send-message",
             json={"content": "Hello", "stream": False},
         )
 
@@ -236,7 +248,7 @@ class TestSendMessageEndpoint:
 
         # Don't specify stream parameter
         response = client.post(
-            f"/api/messages/chat-sessions/{chat_session_with_relationships.id}/send-message",
+            f"/api/v1/messages/chat-sessions/{chat_session_with_relationships.id}/send-message",
             json={"content": "Hello"},
         )
 
@@ -282,7 +294,7 @@ class TestSendMessageEndpoint:
                 mock_streaming.return_value = mock_stream()
 
                 client.post(
-                    f"/api/messages/chat-sessions/{chat_session_with_relationships.id}/send-message",
+                    f"/api/v1/messages/chat-sessions/{chat_session_with_relationships.id}/send-message",
                     json={"content": "New message", "stream": True},
                 )
 

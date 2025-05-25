@@ -273,14 +273,47 @@ class SendMessageResource(Resource):
         """
         try:
             # Validate request
+            if not request.json:
+                raise ValidationError("Request body is required")
+
             content = request.json.get("content")
             stream = request.json.get("stream", True)  # Default to streaming
 
             if not content:
                 raise ValidationError("Message content is required")
 
+            # Check for non-streaming mode first (before doing expensive validation)
+            if not stream:
+                # Non-streaming mode - not implemented yet
+                raise NotImplementedError("Non-streaming mode not yet implemented")
+
             # Get services
             message_service = get_message_service()
+
+            # Validate that chat session exists and can be processed before streaming
+            # This will raise ResourceNotFoundError if session doesn't exist
+            # or BusinessRuleError if API key is missing
+            try:
+                # Check if chat session exists first
+                chat_session = (
+                    message_service.chat_session_repository.get_by_id_with_relations(
+                        chat_session_id
+                    )
+                )
+                if not chat_session.ai_model or not chat_session.ai_model.label:
+                    raise BusinessRuleError("AI model not configured for chat session")
+
+                # Then check API key and other dependencies
+                if not message_service.settings_service:
+                    raise BusinessRuleError("Settings service not available")
+
+                api_key = message_service.settings_service.get_openrouter_api_key()
+                if not api_key:
+                    raise BusinessRuleError("OpenRouter API key not configured")
+
+            except (ResourceNotFoundError, BusinessRuleError):
+                # Let these specific errors bubble up to be handled by the outer try-catch
+                raise
 
             # Don't save user message yet - let the streaming method handle it
             # to avoid duplication in the message history
@@ -317,18 +350,21 @@ class SendMessageResource(Resource):
                         "Connection": "keep-alive",
                     },
                 )
-            else:
-                # Non-streaming mode - not implemented yet
-                raise NotImplementedError("Non-streaming mode not yet implemented")
 
         except ValidationError as e:
-            return error_response(400, e.message, "VALIDATION_ERROR", e.details)
+            return error_response(
+                400, str(e), "VALIDATION_ERROR", getattr(e, "details", None)
+            )
         except ResourceNotFoundError as e:
-            return error_response(404, e.message, "RESOURCE_NOT_FOUND")
+            return error_response(404, str(e), "RESOURCE_NOT_FOUND")
         except BusinessRuleError as e:
             return error_response(503, str(e), "SERVICE_UNAVAILABLE")
+        except NotImplementedError as e:
+            return error_response(500, str(e), "NOT_IMPLEMENTED")
         except Exception as e:
             logger.error(f"Unexpected error in send_message: {str(e)}")
+            logger.error(f"Exception type: {type(e)}")
+            logger.error("Exception traceback:", exc_info=True)
             return error_response(500, "An unexpected error occurred", "INTERNAL_ERROR")
 
 
