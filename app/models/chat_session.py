@@ -62,6 +62,7 @@ class ChatSession(Base):
     pre_prompt_enabled: Mapped[bool] = Column(Boolean, default=False, nullable=False)
     post_prompt: Mapped[Optional[str]] = Column(Text, nullable=True)
     post_prompt_enabled: Mapped[bool] = Column(Boolean, default=False, nullable=False)
+    formatting_settings: Mapped[Optional[str]] = Column(Text, nullable=True)
 
     # Relationships
     character = relationship("Character", back_populates="chat_sessions")

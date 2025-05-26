@@ -121,6 +121,7 @@ def format_settings_response(settings):
         "default_system_prompt_id": settings.default_system_prompt_id,
         "default_user_profile_id": settings.default_user_profile_id,
         "default_avatar_image": settings.default_avatar_image,
+        "default_formatting_rules": settings.default_formatting_rules,
         "has_openrouter_api_key": bool(settings.openrouter_api_key_encrypted),
     }
 
@@ -201,6 +202,7 @@ class ApplicationSettingsResource(Resource):
                 default_system_prompt_id = data.get("default_system_prompt_id")
                 default_user_profile_id = data.get("default_user_profile_id")
                 default_avatar_image = data.get("default_avatar_image")
+                default_formatting_rules = data.get("default_formatting_rules")
 
                 # Only include fields that were actually provided in the request
                 update_kwargs = {}
@@ -212,6 +214,8 @@ class ApplicationSettingsResource(Resource):
                     update_kwargs["default_user_profile_id"] = default_user_profile_id
                 if "default_avatar_image" in data:
                     update_kwargs["default_avatar_image"] = default_avatar_image
+                if "default_formatting_rules" in data:
+                    update_kwargs["default_formatting_rules"] = default_formatting_rules
 
                 # Update the settings with provided values
                 updated_settings = settings_service.update_settings(**update_kwargs)
@@ -355,6 +359,81 @@ class OpenRouterAPIKeyResource(Resource):
                     "success": True,
                     "data": {"message": "OpenRouter API key cleared successfully"},
                 }
+        except DatabaseError as e:
+            logger.error(f"Database error: {e}")
+            return error_response(500, "Database error occurred", "DATABASE_ERROR")
+
+
+@api.route("/default-formatting-rules")
+class DefaultFormattingRulesResource(Resource):
+    """Resource for managing default formatting rules."""
+
+    @api.doc("get_default_formatting_rules")
+    @api.marshal_with(response_model)
+    def get(self) -> Dict[str, Any]:
+        """Get default formatting rules.
+
+        Returns:
+            The default formatting rules as JSON
+        """
+        from app.utils.db import session_scope
+
+        try:
+            with session_scope() as session:
+                settings_service = get_settings_service(session)
+                formatting_rules = settings_service.get_default_formatting_rules()
+
+                return {
+                    "success": True,
+                    "data": {
+                        "default_formatting_rules": formatting_rules,
+                    },
+                }
+        except DatabaseError as e:
+            logger.error(f"Database error: {e}")
+            return error_response(500, "Database error occurred", "DATABASE_ERROR")
+
+    @api.doc("update_default_formatting_rules")
+    @api.expect(
+        {
+            "default_formatting_rules": {
+                "type": "object",
+                "description": "JSON formatting rules",
+            }
+        }
+    )
+    @api.marshal_with(response_model)
+    @api.response(400, "Validation error")
+    def put(self) -> Dict[str, Any]:
+        """Update default formatting rules.
+
+        Returns:
+            Success confirmation
+        """
+        from app.utils.db import session_scope
+
+        try:
+            data = request.json or {}
+            formatting_rules = data.get("default_formatting_rules")
+
+            # Convert to JSON string if it's a dict/object
+            if isinstance(formatting_rules, dict):
+                import json
+
+                formatting_rules = json.dumps(formatting_rules)
+
+            with session_scope() as session:
+                settings_service = get_settings_service(session)
+                settings_service.update_default_formatting_rules(formatting_rules)
+
+                return {
+                    "success": True,
+                    "data": {
+                        "message": "Default formatting rules updated successfully"
+                    },
+                }
+        except ValidationError as e:
+            return error_response(400, e.message, "VALIDATION_ERROR", e.details)
         except DatabaseError as e:
             logger.error(f"Database error: {e}")
             return error_response(500, "Database error occurred", "DATABASE_ERROR")

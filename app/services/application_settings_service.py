@@ -226,6 +226,50 @@ class ApplicationSettingsService:
         logger.info("Clearing OpenRouter API key")
         return self.repository.save_settings(openrouter_api_key_encrypted=None)
 
+    def update_default_formatting_rules(
+        self, formatting_rules: Optional[str] = None
+    ) -> ApplicationSettings:
+        """Update the default formatting rules.
+
+        Args:
+            formatting_rules: JSON string with default formatting rules, or None to clear
+
+        Returns:
+            ApplicationSettings: The updated settings
+
+        Raises:
+            ValidationError: If the formatting rules JSON is invalid
+            DatabaseError: If a database error occurs
+        """
+        # Validate JSON if provided
+        if formatting_rules is not None:
+            import json
+
+            try:
+                json.loads(formatting_rules)
+            except json.JSONDecodeError as e:
+                raise ValidationError(
+                    f"Invalid JSON in formatting rules: {e}",
+                    details={"default_formatting_rules": "Must be valid JSON"},
+                )
+
+        logger.info(
+            f"Updating default formatting rules to {'provided JSON' if formatting_rules else 'None'}"
+        )
+        return self.repository.save_settings(default_formatting_rules=formatting_rules)
+
+    def get_default_formatting_rules(self) -> Optional[str]:
+        """Get the default formatting rules.
+
+        Returns:
+            The default formatting rules JSON string, or None if not set
+
+        Raises:
+            DatabaseError: If a database error occurs
+        """
+        settings = self.get_settings()
+        return settings.default_formatting_rules
+
     def update_settings(self, **kwargs) -> ApplicationSettings:
         """Update multiple application settings at once.
 
@@ -235,6 +279,7 @@ class ApplicationSettingsService:
                 - default_system_prompt_id: New default system prompt ID (optional)
                 - default_user_profile_id: New default user profile ID (optional)
                 - default_avatar_image: New default avatar image path (optional)
+                - default_formatting_rules: New default formatting rules JSON (optional)
 
         Returns:
             ApplicationSettings: The updated settings
@@ -276,6 +321,21 @@ class ApplicationSettingsService:
                     },
                 )
 
+        # Validate formatting rules JSON if provided
+        if (
+            "default_formatting_rules" in kwargs
+            and kwargs["default_formatting_rules"] is not None
+        ):
+            import json
+
+            try:
+                json.loads(kwargs["default_formatting_rules"])
+            except json.JSONDecodeError as e:
+                raise ValidationError(
+                    f"Invalid JSON in formatting rules: {e}",
+                    details={"default_formatting_rules": "Must be valid JSON"},
+                )
+
         logger.info("Updating multiple application settings")
         return self.repository.save_settings(**kwargs)
 
@@ -294,4 +354,5 @@ class ApplicationSettingsService:
             default_system_prompt_id=None,
             default_user_profile_id=None,
             default_avatar_image=None,
+            default_formatting_rules=None,
         )

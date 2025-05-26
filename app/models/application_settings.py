@@ -6,7 +6,7 @@ settings. It is designed as a singleton table with only one row.
 
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import CheckConstraint, Column, ForeignKey, Integer, String
+from sqlalchemy import CheckConstraint, Column, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, relationship
 
 from app.models.base import Base
@@ -44,6 +44,7 @@ class ApplicationSettings(Base):
     )
     default_avatar_image: Mapped[Optional[str]] = Column(String, nullable=True)
     openrouter_api_key_encrypted: Mapped[Optional[str]] = Column(String, nullable=True)
+    default_formatting_rules: Mapped[Optional[str]] = Column(Text, nullable=True)
 
     # Relationships
     default_ai_model = relationship("AIModel", back_populates="default_in_settings")
