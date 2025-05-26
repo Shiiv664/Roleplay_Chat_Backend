@@ -37,6 +37,9 @@ chat_session_model = Model(
         "updated_at": fields.DateTime(
             readOnly=True, description="Last update timestamp"
         ),
+        "message_count": fields.Integer(
+            readOnly=True, description="Number of messages in this session"
+        ),
     },
 )
 

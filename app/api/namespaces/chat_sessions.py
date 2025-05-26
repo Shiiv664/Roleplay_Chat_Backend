@@ -261,7 +261,6 @@ class RecentChatSessions(Resource):
 
     @api.doc("get_recent_chat_sessions")
     @api.expect(recent_sessions_parser)
-    @api.marshal_with(response_model)
     def get(self):
         """Get recent chat sessions."""
         try:
@@ -288,8 +287,10 @@ class RecentChatSessions(Resource):
                     application_settings_repository,
                 )
 
-                # Get recent chat sessions
-                recent_sessions = chat_session_service.get_recent_sessions(limit=limit)
+                # Get recent chat sessions with data
+                recent_sessions = chat_session_service.get_recent_sessions_with_data(
+                    limit=limit
+                )
 
                 return create_response(
                     data=recent_sessions,
@@ -307,7 +308,6 @@ class CharacterChatSessions(Resource):
     """Resource for chat sessions by character."""
 
     @api.doc("get_chat_sessions_by_character")
-    @api.marshal_with(response_model)
     def get(self, character_id):
         """Get chat sessions for a specific character."""
         try:
@@ -330,8 +330,10 @@ class CharacterChatSessions(Resource):
                     application_settings_repository,
                 )
 
-                # Get chat sessions by character
-                sessions = chat_session_service.get_sessions_by_character(character_id)
+                # Get chat sessions by character with data
+                sessions = chat_session_service.get_sessions_by_character_with_data(
+                    character_id
+                )
 
                 return create_response(
                     data=sessions,
@@ -341,49 +343,5 @@ class CharacterChatSessions(Resource):
         except Exception as e:
             logger.exception(
                 f"Error getting chat sessions for character {character_id}"
-            )
-            return handle_exception(e)
-
-
-@api.route("/user-profile/<int:profile_id>")
-@api.param("profile_id", "The user profile identifier")
-class UserProfileChatSessions(Resource):
-    """Resource for chat sessions by user profile."""
-
-    @api.doc("get_chat_sessions_by_user_profile")
-    @api.marshal_with(response_model)
-    def get(self, profile_id):
-        """Get chat sessions for a specific user profile."""
-        try:
-            # Create service and repositories with session
-            with get_db_session() as session:
-                chat_session_repository = ChatSessionRepository(session)
-                character_repository = CharacterRepository(session)
-                user_profile_repository = UserProfileRepository(session)
-                ai_model_repository = AIModelRepository(session)
-                system_prompt_repository = SystemPromptRepository(session)
-
-                application_settings_repository = ApplicationSettingsRepository(session)
-
-                chat_session_service = ChatSessionService(
-                    chat_session_repository,
-                    character_repository,
-                    user_profile_repository,
-                    ai_model_repository,
-                    system_prompt_repository,
-                    application_settings_repository,
-                )
-
-                # Get chat sessions by user profile
-                sessions = chat_session_service.get_sessions_by_user_profile(profile_id)
-
-                return create_response(
-                    data=sessions,
-                    meta={"user_profile_id": profile_id, "count": len(sessions)},
-                )
-
-        except Exception as e:
-            logger.exception(
-                f"Error getting chat sessions for user profile {profile_id}"
             )
             return handle_exception(e)

@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from app.models.chat_session import ChatSession
 from app.repositories.ai_model_repository import AIModelRepository
@@ -102,6 +102,52 @@ class ChatSessionService:
         logger.info(f"Getting chat sessions for character with ID {character_id}")
         return self.repository.get_sessions_by_character_id(character_id)
 
+    def get_sessions_by_character_with_data(self, character_id: int) -> List[Dict]:
+        """Get all chat sessions for a specific character with additional data.
+
+        Args:
+            character_id: ID of the character to get sessions for
+
+        Returns:
+            List[Dict]: List of chat session dictionaries with message_count included
+
+        Raises:
+            ResourceNotFoundError: If character does not exist
+            DatabaseError: If a database error occurs
+        """
+        # Verify character exists
+        self.character_repository.get_by_id(character_id)
+
+        logger.info(
+            f"Getting chat sessions with data for character with ID {character_id}"
+        )
+        sessions = self.repository.get_sessions_by_character_id_with_data(character_id)
+
+        # Convert to dictionaries and include message_count
+        result = []
+        for session in sessions:
+            session_dict = {
+                "id": session.id,
+                "character_id": session.character_id,
+                "user_profile_id": session.user_profile_id,
+                "ai_model_id": session.ai_model_id,
+                "system_prompt_id": session.system_prompt_id,
+                "pre_prompt": session.pre_prompt,
+                "pre_prompt_enabled": session.pre_prompt_enabled,
+                "post_prompt": session.post_prompt,
+                "post_prompt_enabled": session.post_prompt_enabled,
+                "start_time": (
+                    session.start_time.isoformat() if session.start_time else None
+                ),
+                "updated_at": (
+                    session.updated_at.isoformat() if session.updated_at else None
+                ),
+                "message_count": getattr(session, "message_count", 0),
+            }
+            result.append(session_dict)
+
+        return result
+
     def get_sessions_by_user_profile(self, profile_id: int) -> List[ChatSession]:
         """Get all chat sessions for a specific user profile.
 
@@ -139,6 +185,50 @@ class ChatSessionService:
 
         logger.info(f"Getting {limit} most recent chat sessions")
         return self.repository.get_recent_sessions(limit=limit)
+
+    def get_recent_sessions_with_data(self, limit: int = 10) -> List[Dict]:
+        """Get most recently updated chat sessions with additional data.
+
+        Args:
+            limit: Maximum number of sessions to return
+
+        Returns:
+            List[Dict]: List of recent chat session dictionaries with message_count included
+
+        Raises:
+            ValidationError: If limit is invalid
+            DatabaseError: If a database error occurs
+        """
+        if limit < 1:
+            raise ValidationError("Limit must be a positive integer")
+
+        logger.info(f"Getting {limit} most recent chat sessions with data")
+        sessions = self.repository.get_recent_sessions_with_data(limit=limit)
+
+        # Convert to dictionaries and include message_count
+        result = []
+        for session in sessions:
+            session_dict = {
+                "id": session.id,
+                "character_id": session.character_id,
+                "user_profile_id": session.user_profile_id,
+                "ai_model_id": session.ai_model_id,
+                "system_prompt_id": session.system_prompt_id,
+                "pre_prompt": session.pre_prompt,
+                "pre_prompt_enabled": session.pre_prompt_enabled,
+                "post_prompt": session.post_prompt,
+                "post_prompt_enabled": session.post_prompt_enabled,
+                "start_time": (
+                    session.start_time.isoformat() if session.start_time else None
+                ),
+                "updated_at": (
+                    session.updated_at.isoformat() if session.updated_at else None
+                ),
+                "message_count": getattr(session, "message_count", 0),
+            }
+            result.append(session_dict)
+
+        return result
 
     def create_session(
         self,
