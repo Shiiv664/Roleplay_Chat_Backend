@@ -225,9 +225,59 @@ class MessageResource(Resource):
         Returns:
             Success message with count of deleted messages
         """
+        from app.utils.db import session_scope
+
         try:
-            message_service = get_message_service()
-            deleted_count = message_service.delete_message(message_id)
+            with session_scope() as session:
+                # Create message service with the scoped session
+                from app.repositories.ai_model_repository import AIModelRepository
+                from app.repositories.application_settings_repository import (
+                    ApplicationSettingsRepository,
+                )
+                from app.repositories.chat_session_repository import (
+                    ChatSessionRepository,
+                )
+                from app.repositories.message_repository import MessageRepository
+                from app.repositories.system_prompt_repository import (
+                    SystemPromptRepository,
+                )
+                from app.repositories.user_profile_repository import (
+                    UserProfileRepository,
+                )
+                from app.services.application_settings_service import (
+                    ApplicationSettingsService,
+                )
+                from app.services.message_service import MessageService
+                from app.services.openrouter.client import OpenRouterClient
+
+                message_repo = MessageRepository(session)
+                chat_session_repo = ChatSessionRepository(session)
+
+                # Create settings service
+                settings_repo = ApplicationSettingsRepository(session)
+                settings_service = ApplicationSettingsService(
+                    settings_repo,
+                    AIModelRepository(session),
+                    SystemPromptRepository(session),
+                    UserProfileRepository(session),
+                )
+
+                # Create OpenRouter client with API key
+                api_key = settings_service.get_openrouter_api_key()
+                if not api_key:
+                    openrouter_client = None
+                else:
+                    openrouter_client = OpenRouterClient(api_key=api_key)
+
+                message_service = MessageService(
+                    message_repo,
+                    chat_session_repo,
+                    settings_service=settings_service,
+                    openrouter_client=openrouter_client,
+                )
+
+                deleted_count = message_service.delete_message(message_id)
+
             return {
                 "success": True,
                 "data": {
@@ -267,8 +317,9 @@ class SendMessageResource(Resource):
         - Returns Server-Sent Events stream
         - Content-Type: text/event-stream
         - Events format:
+          - data: {"type": "user_message_saved", "user_message_id": 123}
           - data: {"type": "content", "data": "chunk of text"}
-          - data: {"type": "done"}
+          - data: {"type": "done", "ai_message_id": 124}
           - data: {"type": "error", "error": "error message"}
 
         When stream=false:
@@ -330,18 +381,29 @@ class SendMessageResource(Resource):
                     format_content_event,
                     format_done_event,
                     format_error_event,
+                    format_user_message_saved_event,
                 )
 
                 # Create generator wrapper for SSE
                 def generate():
                     try:
-                        for chunk in message_service.generate_streaming_response(
+                        for event in message_service.generate_streaming_response(
                             chat_session_id=chat_session_id,
                             user_message=content,
-                            user_message_id=None,  # Will be set by the streaming method
+                            user_message_id=None,  # Will be created by the streaming method
                         ):
-                            yield format_content_event(chunk)
-                        yield format_done_event()
+                            if event["type"] == "user_message_saved":
+                                yield format_user_message_saved_event(
+                                    event["user_message_id"]
+                                )
+                            elif event["type"] == "content":
+                                yield format_content_event(event["data"])
+                            elif event["type"] == "done":
+                                ai_message_id = event.get("ai_message_id")
+                                yield format_done_event(ai_message_id)
+                            elif event["type"] == "error":
+                                yield format_error_event(event["error"])
+                                return  # Stop streaming on error
                     except Exception as e:
                         logger.error(f"Streaming error: {str(e)}")
                         yield format_error_event(str(e))

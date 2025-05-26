@@ -3,7 +3,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Tuple
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 from app.models.chat_session import ChatSession
 from app.models.message import Message, MessageRole
@@ -601,30 +601,37 @@ class MessageService:
         return messages
 
     def generate_streaming_response(
-        self, chat_session_id: int, user_message: str, user_message_id: int
-    ) -> Iterator[str]:
+        self, chat_session_id: int, user_message: str, user_message_id: int = None
+    ) -> Iterator[Dict[str, Any]]:
         """Generates AI response using OpenRouter streaming API.
 
         Args:
             chat_session_id: ID of the chat session
             user_message: The user's message content
-            user_message_id: ID of the saved user message
+            user_message_id: ID of the saved user message (optional, will be created if None)
 
         Yields:
-            Chunks of the AI response as they arrive
+            Dictionary objects containing:
+            - {"type": "user_message_saved", "user_message_id": int} - when user message is saved
+            - {"type": "content", "data": str} - for each content chunk
+            - {"type": "done", "ai_message_id": int} - when response is complete
+            - {"type": "error", "error": str} - if an error occurs
 
         Side Effects:
+            - Saves user message to database (if not already saved)
             - Saves completed AI message to database
             - Updates stream state management
 
         Process:
             1. Get chat session with all relationships
-            2. Build system prompt using chat session config
-            3. Format message history + new message
-            4. Get model name from chat_session.ai_model.label
-            5. Call OpenRouter streaming API
-            6. Yield chunks as they arrive
-            7. Save complete response to database
+            2. Save user message if not already saved
+            3. Build system prompt using chat session config
+            4. Format message history + new message
+            5. Get model name from chat_session.ai_model.label
+            6. Call OpenRouter streaming API
+            7. Yield chunks as they arrive
+            8. Save complete response to database
+            9. Yield completion event with AI message ID
         """
         # Check dependencies
         if not self.settings_service:
@@ -648,27 +655,37 @@ class MessageService:
 
         model_name = chat_session.ai_model.label
 
+        # Save the user message to database if not already saved
+        if user_message_id is None:
+            user_message_obj = self.create_user_message(chat_session_id, user_message)
+            try:
+                self.repository.session.commit()
+                logger.info("Saved user message to database")
+                if DEBUG_MESSAGE_SERVICE and debug_logger:
+                    debug_logger.info(
+                        f"✅ Saved user message to database: {user_message_obj.id}"
+                    )
+                # Yield the user message saved event
+                yield {
+                    "type": "user_message_saved",
+                    "user_message_id": user_message_obj.id,
+                }
+            except Exception as commit_error:
+                self.repository.session.rollback()
+                logger.error(f"Failed to save user message: {commit_error}")
+                if DEBUG_MESSAGE_SERVICE and debug_logger:
+                    debug_logger.error(
+                        f"❌ Failed to save user message: {commit_error}"
+                    )
+                yield {"type": "error", "error": "Failed to save user message"}
+                return
+
         # Format messages for OpenRouter
         messages = self.format_messages_for_openrouter(chat_session_id, user_message)
 
-        # Save the user message to database before streaming
-        user_message_obj = self.create_user_message(chat_session_id, user_message)
-        try:
-            self.repository.session.commit()
-            logger.info("Saved user message to database")
-            if DEBUG_MESSAGE_SERVICE and debug_logger:
-                debug_logger.info(
-                    f"✅ Saved user message to database: {user_message_obj.id}"
-                )
-        except Exception as commit_error:
-            self.repository.session.rollback()
-            logger.error(f"Failed to save user message: {commit_error}")
-            if DEBUG_MESSAGE_SERVICE and debug_logger:
-                debug_logger.error(f"❌ Failed to save user message: {commit_error}")
-            raise BusinessRuleError("Failed to save user message")
-
         # Accumulate response for saving
         accumulated_response = ""
+        ai_message_obj = None
 
         try:
             # Stream response from OpenRouter
@@ -680,18 +697,30 @@ class MessageService:
                     content = chunk["choices"][0]["delta"].get("content", "")
                     if content:
                         accumulated_response += content
-                        yield content
+                        yield {"type": "content", "data": content}
 
             # Save complete AI response
             if accumulated_response:
-                self.create_assistant_message(chat_session_id, accumulated_response)
+                ai_message_obj = self.create_assistant_message(
+                    chat_session_id, accumulated_response
+                )
                 # Commit the session to ensure message is saved
                 try:
                     self.repository.session.commit()
+                    logger.info(f"Saved AI response to database: {ai_message_obj.id}")
+                    if DEBUG_MESSAGE_SERVICE and debug_logger:
+                        debug_logger.info(f"✅ Saved AI response: {ai_message_obj.id}")
                 except Exception as commit_error:
                     logger.error(f"Failed to commit AI message: {commit_error}")
                     self.repository.session.rollback()
-                    raise
+                    yield {"type": "error", "error": "Failed to save AI response"}
+                    return
+
+            # Yield completion event with AI message ID
+            completion_event = {"type": "done"}
+            if ai_message_obj:
+                completion_event["ai_message_id"] = ai_message_obj.id
+            yield completion_event
 
         except Exception as e:
             logger.error(f"Error during streaming response: {str(e)}")
@@ -701,9 +730,14 @@ class MessageService:
                     f"{accumulated_response}\n\n[Response interrupted due to error]"
                 )
                 try:
-                    self.create_assistant_message(chat_session_id, error_message)
+                    ai_message_obj = self.create_assistant_message(
+                        chat_session_id, error_message
+                    )
                     self.repository.session.commit()
+                    logger.info(f"Saved partial AI response: {ai_message_obj.id}")
                 except Exception as commit_error:
                     logger.error(f"Failed to commit partial message: {commit_error}")
                     self.repository.session.rollback()
-            raise
+
+            # Yield error event
+            yield {"type": "error", "error": str(e)}

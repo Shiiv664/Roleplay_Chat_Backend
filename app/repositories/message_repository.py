@@ -192,6 +192,9 @@ class MessageRepository(BaseRepository[Message]):
                 .delete(synchronize_session=False)
             )
 
+            # Flush the session to ensure the delete is executed
+            self.session.flush()
+
             return deleted_count
         except SQLAlchemyError as e:
             self.session.rollback()

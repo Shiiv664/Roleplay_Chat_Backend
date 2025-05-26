@@ -99,13 +99,23 @@ stream_event_model = Model(
         "type": fields.String(
             required=True,
             description="Event type",
-            enum=["content", "error", "done"],
+            enum=["user_message_saved", "content", "done", "error"],
             example="content",
         ),
         "data": fields.String(
             required=False,
             description="Event data (chunk of response text for content events)",
             example="Quantum physics is",
+        ),
+        "user_message_id": fields.Integer(
+            required=False,
+            description="ID of the saved user message (only for user_message_saved events)",
+            example=123,
+        ),
+        "ai_message_id": fields.Integer(
+            required=False,
+            description="ID of the saved AI message (only for done events)",
+            example=124,
         ),
         "error": fields.String(
             required=False,
