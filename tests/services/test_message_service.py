@@ -669,16 +669,43 @@ class TestMessageService:
         mock_chat_session_repository,
         sample_message,
     ):
-        """Test deleting a message."""
+        """Test deleting a message and all subsequent messages."""
         # Setup
         mock_message_repository.get_by_id.return_value = sample_message
+        mock_message_repository.delete_message_and_subsequent.return_value = (
+            3  # 3 messages deleted
+        )
 
         # Execute
-        service.delete_message(1)
+        deleted_count = service.delete_message(1)
 
         # Verify
+        assert deleted_count == 3
         mock_message_repository.get_by_id.assert_called_once_with(1)
-        mock_message_repository.delete.assert_called_once_with(1)
+        mock_message_repository.delete_message_and_subsequent.assert_called_once_with(1)
+        mock_chat_session_repository.update_session_timestamp.assert_called_once_with(1)
+
+    def test_delete_message_single(
+        self,
+        service,
+        mock_message_repository,
+        mock_chat_session_repository,
+        sample_message,
+    ):
+        """Test deleting a message when it's the last message in conversation."""
+        # Setup
+        mock_message_repository.get_by_id.return_value = sample_message
+        mock_message_repository.delete_message_and_subsequent.return_value = (
+            1  # Only 1 message deleted
+        )
+
+        # Execute
+        deleted_count = service.delete_message(1)
+
+        # Verify
+        assert deleted_count == 1
+        mock_message_repository.get_by_id.assert_called_once_with(1)
+        mock_message_repository.delete_message_and_subsequent.assert_called_once_with(1)
         mock_chat_session_repository.update_session_timestamp.assert_called_once_with(1)
 
     def test_delete_message_not_found(
@@ -695,5 +722,5 @@ class TestMessageService:
             service.delete_message(999)
 
         # Verify repository methods were not called
-        mock_message_repository.delete.assert_not_called()
+        mock_message_repository.delete_message_and_subsequent.assert_not_called()
         mock_chat_session_repository.update_session_timestamp.assert_not_called()

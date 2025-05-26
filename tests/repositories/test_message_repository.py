@@ -5,7 +5,7 @@ from unittest.mock import patch
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.models.message import MessageRole
+from app.models.message import Message, MessageRole
 from app.repositories.message_repository import MessageRepository
 from app.utils.exceptions import DatabaseError
 
@@ -202,6 +202,76 @@ class TestMessageRepository:
         latest_message_ids = {m.id for m in latest_messages}
         all_message_ids = {m.id for m in messages}
         assert latest_message_ids.issubset(all_message_ids)
+
+    def test_delete_message_and_subsequent(self, db_session, create_test_messages):
+        """Test deleting a message and all subsequent messages."""
+        repo = MessageRepository(db_session)
+        messages, session = create_test_messages
+
+        # Verify we have 10 messages initially
+        initial_count = repo.get_by_chat_session_id(session.id)
+        assert len(initial_count) == 10
+
+        # Get the 4th message (index 3) - this will be our target for deletion
+        target_message = messages[3]
+
+        # Delete the 4th message and all subsequent messages
+        deleted_count = repo.delete_message_and_subsequent(target_message.id)
+        db_session.commit()
+
+        # Should have deleted 7 messages (4th through 10th)
+        assert deleted_count == 7
+
+        # Verify only first 3 messages remain
+        remaining_messages = repo.get_by_chat_session_id(session.id)
+        assert len(remaining_messages) == 3
+
+        # Verify the remaining messages are the first 3
+        remaining_ids = {m.id for m in remaining_messages}
+        expected_ids = {messages[0].id, messages[1].id, messages[2].id}
+        assert remaining_ids == expected_ids
+
+    def test_delete_message_and_subsequent_last_message(
+        self, db_session, create_test_messages
+    ):
+        """Test deleting the last message only."""
+        repo = MessageRepository(db_session)
+        messages, session = create_test_messages
+
+        # Get the last message (index 9)
+        last_message = messages[9]
+
+        # Delete the last message
+        deleted_count = repo.delete_message_and_subsequent(last_message.id)
+        db_session.commit()
+
+        # Should have deleted only 1 message
+        assert deleted_count == 1
+
+        # Verify 9 messages remain
+        remaining_messages = repo.get_by_chat_session_id(session.id)
+        assert len(remaining_messages) == 9
+
+    def test_delete_message_and_subsequent_first_message(
+        self, db_session, create_test_messages
+    ):
+        """Test deleting the first message and all subsequent messages."""
+        repo = MessageRepository(db_session)
+        messages, session = create_test_messages
+
+        # Get the first message (index 0)
+        first_message = messages[0]
+
+        # Delete the first message and all subsequent
+        deleted_count = repo.delete_message_and_subsequent(first_message.id)
+        db_session.commit()
+
+        # Should have deleted all 10 messages
+        assert deleted_count == 10
+
+        # Verify no messages remain
+        remaining_messages = repo.get_by_chat_session_id(session.id)
+        assert len(remaining_messages) == 0
 
     def test_database_error_handling(self, db_session, create_test_session):
         """Test handling of database errors in message repository methods."""

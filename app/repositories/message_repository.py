@@ -159,3 +159,42 @@ class MessageRepository(BaseRepository[Message]):
             self._handle_db_exception(
                 e, f"Error retrieving latest messages for chat session ID {session_id}"
             )
+
+    def delete_message_and_subsequent(self, message_id: int) -> int:
+        """Delete a message and all subsequent messages in the same chat session.
+
+        Messages are considered subsequent if they have an ID greater than or equal
+        to the target message ID in the same chat session. This assumes messages
+        are created in chronological order.
+
+        Args:
+            message_id: The ID of the message to delete
+
+        Returns:
+            int: Number of messages deleted
+
+        Raises:
+            DatabaseError: If a database error occurs
+        """
+        try:
+            # First get the message to find its chat session
+            target_message = self.get_by_id(message_id)
+            target_chat_session_id = target_message.chat_session_id
+
+            # Delete all messages with ID >= target message ID in the same chat session
+            # This is simpler and more reliable than timestamp comparisons
+            deleted_count = (
+                self.session.query(Message)
+                .filter(
+                    Message.chat_session_id == target_chat_session_id,
+                    Message.id >= message_id,
+                )
+                .delete(synchronize_session=False)
+            )
+
+            return deleted_count
+        except SQLAlchemyError as e:
+            self.session.rollback()
+            self._handle_db_exception(
+                e, f"Error deleting message and subsequent messages for ID {message_id}"
+            )

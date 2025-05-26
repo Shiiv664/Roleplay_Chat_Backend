@@ -214,20 +214,26 @@ class MessageResource(Resource):
     @api.response(200, "Success", response_model)
     @api.response(404, "Message not found")
     def delete(self, message_id: int) -> Dict[str, Any]:
-        """Delete a message.
+        """Delete a message and all subsequent messages.
+
+        When a message is deleted, all messages that came after it in the
+        conversation are also deleted to maintain conversation flow integrity.
 
         Args:
             message_id: The message ID
 
         Returns:
-            Success message
+            Success message with count of deleted messages
         """
         try:
             message_service = get_message_service()
-            message_service.delete_message(message_id)
+            deleted_count = message_service.delete_message(message_id)
             return {
                 "success": True,
-                "data": {"message": "Message deleted successfully"},
+                "data": {
+                    "message": f"Successfully deleted {deleted_count} message(s)",
+                    "deleted_count": deleted_count,
+                },
             }
         except ResourceNotFoundError as e:
             return error_response(404, e.message, "RESOURCE_NOT_FOUND")

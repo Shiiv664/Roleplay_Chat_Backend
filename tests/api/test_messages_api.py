@@ -209,6 +209,9 @@ class TestMessagesAPI:
 
     def test_delete_message(self, client, mock_message_service, sample_message):
         """Test deleting a message."""
+        # Configure the mock to return a count of deleted messages
+        mock_message_service.delete_message.return_value = 3  # 3 messages deleted
+
         # Execute API request
         response = client.delete(f"/api/v1/messages/{sample_message.id}")
 
@@ -217,7 +220,8 @@ class TestMessagesAPI:
         data = json.loads(response.data)
 
         assert data["success"] is True
-        assert "deleted successfully" in data["data"]["message"]
+        assert "Successfully deleted 3 message(s)" == data["data"]["message"]
+        assert data["data"]["deleted_count"] == 3
 
         # Verify service was called with correct ID
         mock_message_service.delete_message.assert_called_once_with(sample_message.id)

@@ -355,11 +355,17 @@ class MessageService:
 
         return updated_message
 
-    def delete_message(self, message_id: int) -> None:
-        """Delete a message.
+    def delete_message(self, message_id: int) -> int:
+        """Delete a message and all subsequent messages in the conversation.
+
+        This ensures conversation flow integrity by removing the target message
+        and any messages that came after it in the chat session.
 
         Args:
             message_id: ID of the message to delete
+
+        Returns:
+            int: Number of messages deleted
 
         Raises:
             ResourceNotFoundError: If message doesn't exist
@@ -368,11 +374,17 @@ class MessageService:
         # Get current message to ensure it exists and to get the session ID
         message = self.repository.get_by_id(message_id)
 
-        logger.info(f"Deleting message with ID {message_id}")
-        self.repository.delete(message_id)
+        logger.info(
+            f"Deleting message with ID {message_id} and all subsequent messages"
+        )
+        deleted_count = self.repository.delete_message_and_subsequent(message_id)
+
+        logger.info(f"Deleted {deleted_count} messages starting from ID {message_id}")
 
         # Update the chat session timestamp
         self.chat_session_repository.update_session_timestamp(message.chat_session_id)
+
+        return deleted_count
 
     def _verify_chat_session_exists(self, session_id: int) -> None:
         """Verify that a chat session exists.
