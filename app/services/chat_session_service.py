@@ -368,6 +368,7 @@ class ChatSessionService:
     def update_session(
         self,
         session_id: int,
+        user_profile_id: Optional[int] = None,
         ai_model_id: Optional[int] = None,
         system_prompt_id: Optional[int] = None,
         pre_prompt: Optional[str] = None,
@@ -380,6 +381,7 @@ class ChatSessionService:
 
         Args:
             session_id: ID of the chat session to update
+            user_profile_id: New user profile ID (optional)
             ai_model_id: New AI model ID (optional)
             system_prompt_id: New system prompt ID (optional)
             pre_prompt: New pre-prompt text (optional)
@@ -401,6 +403,11 @@ class ChatSessionService:
 
         # Prepare update data
         update_data = {}
+
+        # Check and validate user profile if provided
+        if user_profile_id is not None:
+            self.user_profile_repository.get_by_id(user_profile_id)
+            update_data["user_profile_id"] = user_profile_id
 
         # Check and validate AI model if provided
         if ai_model_id is not None:
