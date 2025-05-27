@@ -136,6 +136,7 @@ class ChatSessionService:
                 "pre_prompt_enabled": session.pre_prompt_enabled,
                 "post_prompt": session.post_prompt,
                 "post_prompt_enabled": session.post_prompt_enabled,
+                "formatting_settings": session.formatting_settings,
                 "start_time": (
                     session.start_time.isoformat() if session.start_time else None
                 ),
@@ -218,6 +219,7 @@ class ChatSessionService:
                 "pre_prompt_enabled": session.pre_prompt_enabled,
                 "post_prompt": session.post_prompt,
                 "post_prompt_enabled": session.post_prompt_enabled,
+                "formatting_settings": session.formatting_settings,
                 "start_time": (
                     session.start_time.isoformat() if session.start_time else None
                 ),
@@ -240,6 +242,7 @@ class ChatSessionService:
         pre_prompt_enabled: bool = False,
         post_prompt: Optional[str] = None,
         post_prompt_enabled: bool = False,
+        formatting_settings: Optional[str] = None,
     ) -> ChatSession:
         """Create a new chat session.
 
@@ -252,6 +255,7 @@ class ChatSessionService:
             pre_prompt_enabled: Whether the pre-prompt is enabled (default: False)
             post_prompt: Optional text to add after each AI request (optional)
             post_prompt_enabled: Whether the post-prompt is enabled (default: False)
+            formatting_settings: JSON string with formatting settings (optional)
 
         Returns:
             ChatSession: The created chat session
@@ -281,6 +285,7 @@ class ChatSessionService:
             "pre_prompt_enabled": pre_prompt_enabled,
             "post_prompt": post_prompt,
             "post_prompt_enabled": post_prompt_enabled,
+            "formatting_settings": formatting_settings,
             "start_time": datetime.utcnow(),
             "updated_at": datetime.utcnow(),
         }
@@ -347,6 +352,7 @@ class ChatSessionService:
             "pre_prompt_enabled": False,
             "post_prompt": None,
             "post_prompt_enabled": False,
+            "formatting_settings": settings.default_formatting_rules,
             "start_time": datetime.utcnow(),
             "updated_at": datetime.utcnow(),
         }
@@ -368,6 +374,7 @@ class ChatSessionService:
         pre_prompt_enabled: Optional[bool] = None,
         post_prompt: Optional[str] = None,
         post_prompt_enabled: Optional[bool] = None,
+        formatting_settings: Optional[str] = None,
     ) -> ChatSession:
         """Update an existing chat session.
 
@@ -379,6 +386,7 @@ class ChatSessionService:
             pre_prompt_enabled: New pre-prompt enabled flag (optional)
             post_prompt: New post-prompt text (optional)
             post_prompt_enabled: New post-prompt enabled flag (optional)
+            formatting_settings: New formatting settings JSON string (optional)
 
         Returns:
             ChatSession: The updated chat session
@@ -419,6 +427,10 @@ class ChatSessionService:
         # Update post-prompt enabled flag if provided
         if post_prompt_enabled is not None:
             update_data["post_prompt_enabled"] = post_prompt_enabled
+
+        # Update formatting settings if provided
+        if formatting_settings is not None:
+            update_data["formatting_settings"] = formatting_settings
 
         # If any changes, update the updated_at timestamp
         if update_data:

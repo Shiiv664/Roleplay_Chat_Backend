@@ -25,6 +25,9 @@ application_settings_model = Model(
         "default_avatar_image": fields.String(
             required=False, description="Default avatar image path or URL"
         ),
+        "default_formatting_rules": fields.Raw(
+            required=False, description="Default text formatting rules as JSON object"
+        ),
     },
 )
 
@@ -46,6 +49,9 @@ application_settings_with_relations_model = Model(
         ),
         "default_avatar_image": fields.String(
             required=False, description="Default avatar image path or URL"
+        ),
+        "default_formatting_rules": fields.Raw(
+            required=False, description="Default text formatting rules as JSON object"
         ),
         "has_openrouter_api_key": fields.Boolean(
             readOnly=True, description="Whether OpenRouter API key is configured"
@@ -81,6 +87,9 @@ application_settings_update_model = Model(
         ),
         "default_avatar_image": fields.String(
             required=False, description="Default avatar image path or URL"
+        ),
+        "default_formatting_rules": fields.Raw(
+            required=False, description="Default text formatting rules as JSON object"
         ),
     },
 )

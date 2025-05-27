@@ -31,6 +31,9 @@ chat_session_model = Model(
         "post_prompt_enabled": fields.Boolean(
             required=True, description="Whether post-prompt is enabled", default=False
         ),
+        "formatting_settings": fields.Raw(
+            required=False, description="Text formatting settings as JSON object"
+        ),
         "start_time": fields.DateTime(
             readOnly=True, description="Session start timestamp"
         ),
@@ -72,6 +75,9 @@ chat_session_update_model = Model(
         ),
         "post_prompt_enabled": fields.Boolean(
             required=False, description="Whether post-prompt is enabled"
+        ),
+        "formatting_settings": fields.Raw(
+            required=False, description="Text formatting settings as JSON object"
         ),
     },
 )

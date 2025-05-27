@@ -205,6 +205,7 @@ class ChatSessionItem(Resource):
                     pre_prompt_enabled=data.get("pre_prompt_enabled"),
                     post_prompt=data.get("post_prompt"),
                     post_prompt_enabled=data.get("post_prompt_enabled"),
+                    formatting_settings=data.get("formatting_settings"),
                 )
 
                 # Commit the transaction
@@ -343,5 +344,73 @@ class CharacterChatSessions(Resource):
         except Exception as e:
             logger.exception(
                 f"Error getting chat sessions for character {character_id}"
+            )
+            return handle_exception(e)
+
+
+@api.route("/<int:id>/formatting")
+@api.param("id", "The chat session identifier")
+@api.response(404, "Chat session not found")
+class ChatSessionFormattingResource(Resource):
+    """Resource for chat session formatting settings."""
+
+    @api.doc("update_chat_session_formatting")
+    @api.expect(
+        {
+            "formatting_settings": {
+                "type": "object",
+                "description": "Formatting settings JSON",
+            }
+        }
+    )
+    @api.marshal_with(response_model)
+    @api.response(400, "Validation error")
+    def put(self, id):
+        """Update formatting settings for a chat session."""
+        try:
+            # Get request data
+            data = request.json or {}
+            formatting_settings = data.get("formatting_settings")
+
+            # Convert to JSON string if it's a dict/object
+            if isinstance(formatting_settings, dict):
+                import json
+
+                formatting_settings = json.dumps(formatting_settings)
+
+            # Create service and repositories with session
+            with get_db_session() as session:
+                chat_session_repository = ChatSessionRepository(session)
+                character_repository = CharacterRepository(session)
+                user_profile_repository = UserProfileRepository(session)
+                ai_model_repository = AIModelRepository(session)
+                system_prompt_repository = SystemPromptRepository(session)
+                application_settings_repository = ApplicationSettingsRepository(session)
+
+                chat_session_service = ChatSessionService(
+                    chat_session_repository,
+                    character_repository,
+                    user_profile_repository,
+                    ai_model_repository,
+                    system_prompt_repository,
+                    application_settings_repository,
+                )
+
+                # Update only formatting settings
+                chat_session_service.update_session(
+                    session_id=id,
+                    formatting_settings=formatting_settings,
+                )
+
+                # Commit the transaction
+                session.commit()
+
+                return create_response(
+                    data={"message": "Formatting settings updated successfully"}
+                )
+
+        except Exception as e:
+            logger.exception(
+                f"Error updating formatting settings for chat session {id}"
             )
             return handle_exception(e)
