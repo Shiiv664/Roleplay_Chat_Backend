@@ -9,7 +9,9 @@ from app.api.models.chat_session import (
     chat_session_create_model,
     chat_session_list_model,
     chat_session_model,
+    chat_session_response_model,
     chat_session_update_model,
+    first_message_init_model,
     response_model,
 )
 from app.api.namespaces import create_response, handle_exception
@@ -25,6 +27,7 @@ from app.repositories.system_prompt_repository import SystemPromptRepository
 from app.repositories.user_profile_repository import UserProfileRepository
 from app.services.chat_session_service import ChatSessionService
 from app.utils.db import get_db_session
+from app.utils.exceptions import ValidationError
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -35,8 +38,10 @@ api = Namespace("chat-sessions", description="Chat Session operations")
 # Register models with namespace
 api.models[chat_session_model.name] = chat_session_model
 api.models[chat_session_create_model.name] = chat_session_create_model
+api.models[chat_session_response_model.name] = chat_session_response_model
 api.models[chat_session_update_model.name] = chat_session_update_model
 api.models[chat_session_list_model.name] = chat_session_list_model
+api.models[first_message_init_model.name] = first_message_init_model
 api.models[response_model.name] = response_model
 
 
@@ -89,7 +94,7 @@ class ChatSessionList(Resource):
 
     @api.doc("create_chat_session")
     @api.expect(chat_session_create_model)
-    @api.marshal_with(response_model)
+    @api.marshal_with(chat_session_response_model)
     def post(self):
         """Create a new chat session with default settings."""
         try:
@@ -136,7 +141,7 @@ class ChatSessionItem(Resource):
     """Resource for individual chat session operations."""
 
     @api.doc("get_chat_session")
-    @api.marshal_with(response_model)
+    @api.marshal_with(chat_session_response_model)
     def get(self, id):
         """Get a chat session by ID."""
         try:
@@ -170,7 +175,7 @@ class ChatSessionItem(Resource):
 
     @api.doc("update_chat_session")
     @api.expect(chat_session_update_model)
-    @api.marshal_with(response_model)
+    @api.marshal_with(chat_session_response_model)
     def put(self, id):
         """Update a chat session."""
         try:
@@ -414,4 +419,70 @@ class ChatSessionFormattingResource(Resource):
             logger.exception(
                 f"Error updating formatting settings for chat session {id}"
             )
+            return handle_exception(e)
+
+
+@api.route("/<int:id>/initialize-first-message")
+@api.param("id", "The chat session identifier")
+@api.response(404, "Chat session not found")
+class ChatSessionFirstMessage(Resource):
+    """Resource for chat session first message initialization."""
+
+    @api.doc("initialize_first_message")
+    @api.expect(first_message_init_model)
+    @api.marshal_with(response_model)
+    @api.response(
+        400, "Validation error - session already initialized or invalid content"
+    )
+    def post(self, id):
+        """Initialize the first message for a chat session.
+
+        This endpoint is used when a character has multiple first messages and the user
+        needs to select which one to use for the chat session. Once initialized, the
+        session will have first_message_initialized=true and normal chat can proceed.
+        """
+        try:
+            # Get request data
+            data = request.json
+            if not data or "content" not in data:
+                raise ValidationError("Request must include 'content' field")
+
+            content = data.get("content")
+
+            # Create service and repositories with session
+            with get_db_session() as session:
+                chat_session_repository = ChatSessionRepository(session)
+                character_repository = CharacterRepository(session)
+                user_profile_repository = UserProfileRepository(session)
+                ai_model_repository = AIModelRepository(session)
+                system_prompt_repository = SystemPromptRepository(session)
+                application_settings_repository = ApplicationSettingsRepository(session)
+
+                chat_session_service = ChatSessionService(
+                    chat_session_repository,
+                    character_repository,
+                    user_profile_repository,
+                    ai_model_repository,
+                    system_prompt_repository,
+                    application_settings_repository,
+                )
+
+                # Initialize first message
+                chat_session = chat_session_service.initialize_first_message(
+                    id, content
+                )
+
+                # Commit the transaction
+                session.commit()
+
+                return create_response(
+                    data={
+                        "id": chat_session.id,
+                        "first_message_initialized": chat_session.first_message_initialized,
+                        "message": "First message initialized successfully",
+                    }
+                )
+
+        except Exception as e:
+            logger.exception(f"Error initializing first message for chat session {id}")
             return handle_exception(e)

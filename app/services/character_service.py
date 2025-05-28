@@ -92,6 +92,7 @@ class CharacterService:
         name: str,
         avatar_image: Optional[str] = None,
         description: Optional[str] = None,
+        first_messages: Optional[List] = None,
     ) -> Character:
         """Create a new character.
 
@@ -100,6 +101,7 @@ class CharacterService:
             name: Display name of the character
             avatar_image: Path or URL to character's avatar image (optional)
             description: Detailed description of the character (optional)
+            first_messages: List of first message objects (optional)
 
         Returns:
             Character: The created character entity
@@ -109,7 +111,9 @@ class CharacterService:
             DatabaseError: If a database error occurs
         """
         # Validate input
-        self._validate_character_data(label, name, avatar_image, description)
+        self._validate_character_data(
+            label, name, avatar_image, description, first_messages
+        )
 
         # Check if character with this label already exists
         existing = self.repository.get_by_label(label)
@@ -118,7 +122,11 @@ class CharacterService:
 
         logger.info(f"Creating character with label '{label}'")
         return self.repository.create(
-            label=label, name=name, avatar_image=avatar_image, description=description
+            label=label,
+            name=name,
+            avatar_image=avatar_image,
+            description=description,
+            first_messages=first_messages,
         )
 
     def update_character(
@@ -128,6 +136,7 @@ class CharacterService:
         name: Optional[str] = None,
         avatar_image: Optional[str] = None,
         description: Optional[str] = None,
+        first_messages: Optional[List] = None,
     ) -> Character:
         """Update an existing character.
 
@@ -137,6 +146,7 @@ class CharacterService:
             name: New name for the character (optional)
             avatar_image: New avatar image path/URL (optional)
             description: New description (optional)
+            first_messages: New list of first message objects (optional)
 
         Returns:
             Character: The updated character entity
@@ -179,6 +189,11 @@ class CharacterService:
 
         if description is not None:
             update_data["description"] = description
+
+        if first_messages is not None:
+            # Validate first messages structure
+            self._validate_first_messages(first_messages)
+            update_data["first_messages"] = first_messages
 
         if not update_data:
             # Nothing to update
@@ -235,6 +250,7 @@ class CharacterService:
         name: str,
         avatar_image: Optional[str] = None,
         description: Optional[str] = None,
+        first_messages: Optional[List] = None,
     ) -> None:
         """Validate character data.
 
@@ -243,6 +259,7 @@ class CharacterService:
             name: Character name to validate
             avatar_image: Character avatar image to validate (optional)
             description: Character description to validate (optional)
+            first_messages: Character first messages to validate (optional)
 
         Raises:
             ValidationError: If validation fails
@@ -269,5 +286,54 @@ class CharacterService:
         if description is not None and not isinstance(description, str):
             errors["description"] = "Description must be a string"
 
+        # First messages validation (optional)
+        if first_messages is not None:
+            try:
+                self._validate_first_messages(first_messages)
+            except ValidationError as e:
+                errors["first_messages"] = str(e)
+
         if errors:
             raise ValidationError("Character validation failed", details=errors)
+
+    def _validate_first_messages(self, first_messages: List) -> None:
+        """Validate first messages structure.
+
+        Args:
+            first_messages: List of first message objects to validate
+
+        Raises:
+            ValidationError: If validation fails
+        """
+        if not isinstance(first_messages, list):
+            raise ValidationError("First messages must be a list")
+
+        for i, message in enumerate(first_messages):
+            if not isinstance(message, dict):
+                raise ValidationError(f"First message at index {i} must be an object")
+
+            if "content" not in message:
+                raise ValidationError(
+                    f"First message at index {i} must have a 'content' field"
+                )
+
+            if (
+                not isinstance(message["content"], str)
+                or not message["content"].strip()
+            ):
+                raise ValidationError(
+                    f"First message content at index {i} must be a non-empty string"
+                )
+
+            # Validate optional fields
+            if "id" in message and not isinstance(message["id"], (int, type(None))):
+                raise ValidationError(
+                    f"First message id at index {i} must be an integer or null"
+                )
+
+            if "order" in message and not isinstance(
+                message["order"], (int, type(None))
+            ):
+                raise ValidationError(
+                    f"First message order at index {i} must be an integer or null"
+                )

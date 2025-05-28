@@ -137,6 +137,9 @@ class ChatSessionService:
                 "post_prompt": session.post_prompt,
                 "post_prompt_enabled": session.post_prompt_enabled,
                 "formatting_settings": session.formatting_settings,
+                "first_message_initialized": getattr(
+                    session, "first_message_initialized", False
+                ),
                 "start_time": (
                     session.start_time.isoformat() if session.start_time else None
                 ),
@@ -220,6 +223,9 @@ class ChatSessionService:
                 "post_prompt": session.post_prompt,
                 "post_prompt_enabled": session.post_prompt_enabled,
                 "formatting_settings": session.formatting_settings,
+                "first_message_initialized": getattr(
+                    session, "first_message_initialized", False
+                ),
                 "start_time": (
                     session.start_time.isoformat() if session.start_time else None
                 ),
@@ -311,7 +317,7 @@ class ChatSessionService:
             DatabaseError: If a database error occurs
         """
         # Validate that character exists
-        self.character_repository.get_by_id(character_id)
+        character = self.character_repository.get_by_id(character_id)
 
         # Get application settings for defaults
         settings = self.application_settings_repository.get_settings()
@@ -342,6 +348,12 @@ class ChatSessionService:
             settings.default_system_prompt_id,
         )
 
+        # Determine first_message_initialized flag based on character's first messages
+        first_messages = character.first_messages or []
+        first_message_initialized = (
+            len(first_messages) <= 1
+        )  # True if 0 or 1, False if multiple
+
         # Create session with defaults
         session_data = {
             "character_id": character_id,
@@ -353,6 +365,7 @@ class ChatSessionService:
             "post_prompt": None,
             "post_prompt_enabled": False,
             "formatting_settings": settings.default_formatting_rules,
+            "first_message_initialized": first_message_initialized,
             "start_time": datetime.utcnow(),
             "updated_at": datetime.utcnow(),
         }
@@ -363,7 +376,15 @@ class ChatSessionService:
             f"AI model: {settings.default_ai_model_id}, "
             f"system prompt: {settings.default_system_prompt_id})"
         )
-        return self.repository.create(**session_data)
+        chat_session = self.repository.create(**session_data)
+
+        # If exactly one first message, auto-create the assistant message
+        if len(first_messages) == 1:
+            self._create_first_message(chat_session.id, first_messages[0]["content"])
+            chat_session.first_message_initialized = True
+            self.repository.update(chat_session.id, first_message_initialized=True)
+
+        return chat_session
 
     def update_session(
         self,
@@ -480,6 +501,65 @@ class ChatSessionService:
 
         logger.info(f"Deleting chat session with ID {session_id}")
         self.repository.delete(session_id)
+
+    def initialize_first_message(self, session_id: int, content: str) -> ChatSession:
+        """Initialize the first message for a chat session.
+
+        Args:
+            session_id: ID of the chat session
+            content: Content of the first message to initialize
+
+        Returns:
+            ChatSession: The updated chat session
+
+        Raises:
+            ResourceNotFoundError: If session doesn't exist
+            ValidationError: If session already initialized or invalid content
+            DatabaseError: If a database error occurs
+        """
+        # Get the session
+        chat_session = self.repository.get_by_id(session_id)
+
+        # Check if already initialized
+        if chat_session.first_message_initialized:
+            raise ValidationError("First message already initialized for this session")
+
+        # Validate content
+        if not content or not content.strip():
+            raise ValidationError("First message content cannot be empty")
+
+        # Create the assistant message
+        self._create_first_message(session_id, content)
+
+        # Mark as initialized
+        updated_session = self.repository.update(
+            session_id, first_message_initialized=True
+        )
+
+        logger.info(f"Initialized first message for chat session {session_id}")
+        return updated_session
+
+    def _create_first_message(self, session_id: int, content: str) -> None:
+        """Create a first message for a chat session.
+
+        Args:
+            session_id: ID of the chat session
+            content: Content of the first message
+
+        Raises:
+            DatabaseError: If a database error occurs
+        """
+        # Import MessageService to avoid circular imports
+        from app.repositories.message_repository import MessageRepository
+        from app.services.message_service import MessageService
+
+        # Create message service for this operation
+        message_repository = MessageRepository(self.repository.session)
+        message_service = MessageService(message_repository, self.repository)
+
+        # Create the assistant message
+        message_service.create_assistant_message(session_id, content)
+        logger.info(f"Created first message for chat session {session_id}")
 
     def _validate_session_entities(
         self,

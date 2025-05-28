@@ -25,6 +25,9 @@ character_model = Model(
         "avatar_url": fields.String(
             readOnly=True, description="Character avatar image URL"
         ),
+        "first_messages": fields.List(
+            fields.Raw, required=False, description="Array of first message objects"
+        ),
         "created_at": fields.DateTime(readOnly=True, description="Creation timestamp"),
         "updated_at": fields.DateTime(
             readOnly=True, description="Last update timestamp"
@@ -50,6 +53,9 @@ character_create_model = Model(
         "avatar_image": fields.String(
             required=False, description="Character avatar image URL (for JSON requests)"
         ),
+        "first_messages": fields.List(
+            fields.Raw, required=False, description="Array of first message objects"
+        ),
     },
 )
 
@@ -73,6 +79,9 @@ character_create_multipart_model = Model(
             description="Character avatar image file (PNG, JPG, GIF, WebP, max 5MB)",
             type="file",
         ),
+        "first_messages": fields.String(
+            required=False, description="JSON string of first message objects"
+        ),
     },
 )
 
@@ -93,6 +102,9 @@ character_update_model = Model(
         ),
         "avatar_image": fields.String(
             required=False, description="Character avatar image path"
+        ),
+        "first_messages": fields.List(
+            fields.Raw, required=False, description="Array of first message objects"
         ),
     },
 )

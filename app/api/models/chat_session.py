@@ -34,6 +34,11 @@ chat_session_model = Model(
         "formatting_settings": fields.Raw(
             required=False, description="Text formatting settings as JSON object"
         ),
+        "first_message_initialized": fields.Boolean(
+            required=True,
+            description="Whether first message has been initialized",
+            default=False,
+        ),
         "start_time": fields.DateTime(
             readOnly=True, description="Session start timestamp"
         ),
@@ -93,6 +98,27 @@ chat_session_list_model = Model(
             fields.Nested(chat_session_model), description="List of chat sessions"
         ),
         "pagination": fields.Raw(description="Pagination information"),
+    },
+)
+
+# First message initialization model
+first_message_init_model = Model(
+    "FirstMessageInit",
+    {
+        "content": fields.String(
+            required=True, description="Content of the first message to initialize"
+        ),
+    },
+)
+
+# Response wrapper for ChatSession
+chat_session_response_model = Model(
+    "ChatSessionResponse",
+    {
+        "success": fields.Boolean(default=True, description="Success status"),
+        "data": fields.Nested(chat_session_model, description="Chat session data"),
+        "meta": fields.Raw(description="Additional metadata"),
+        "error": fields.Raw(description="Error information, if any"),
     },
 )
 
