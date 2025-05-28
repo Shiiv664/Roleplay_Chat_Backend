@@ -47,6 +47,10 @@
           "description": "Default avatar image path or URL",
           "type": "string"
         },
+        "default_formatting_rules": {
+          "description": "Default text formatting rules as JSON object",
+          "type": "object"
+        },
         "default_system_prompt_id": {
           "description": "Default System Prompt ID",
           "type": "integer"
@@ -67,6 +71,13 @@
         "description": {
           "description": "Character description",
           "type": "string"
+        },
+        "first_messages": {
+          "description": "Array of first message objects",
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
         },
         "label": {
           "description": "Unique character identifier",
@@ -97,6 +108,13 @@
           "description": "Character description",
           "type": "string"
         },
+        "first_messages": {
+          "description": "Array of first message objects",
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
         "label": {
           "description": "Unique character identifier",
           "maxLength": 50,
@@ -112,7 +130,7 @@
       },
       "type": "object"
     },
-    "ChatSessionCreate": {
+    "ChatSession": {
       "properties": {
         "ai_model_id": {
           "description": "AI Model ID for this session",
@@ -122,6 +140,23 @@
           "description": "Character ID for this session",
           "type": "integer"
         },
+        "first_message_initialized": {
+          "default": false,
+          "description": "Whether first message has been initialized",
+          "type": "boolean"
+        },
+        "formatting_settings": {
+          "description": "Text formatting settings as JSON object",
+          "type": "object"
+        },
+        "id": {
+          "description": "Chat Session ID",
+          "type": "integer"
+        },
+        "message_count": {
+          "description": "Number of messages in this session",
+          "type": "integer"
+        },
         "post_prompt": {
           "description": "Optional text to add after each AI request",
           "type": "string"
@@ -140,9 +175,19 @@
           "description": "Whether pre-prompt is enabled",
           "type": "boolean"
         },
+        "start_time": {
+          "description": "Session start timestamp",
+          "format": "date-time",
+          "type": "string"
+        },
         "system_prompt_id": {
           "description": "System Prompt ID for this session",
           "type": "integer"
+        },
+        "updated_at": {
+          "description": "Last update timestamp",
+          "format": "date-time",
+          "type": "string"
         },
         "user_profile_id": {
           "description": "User Profile ID for this session",
@@ -152,9 +197,50 @@
       "required": [
         "ai_model_id",
         "character_id",
+        "first_message_initialized",
+        "post_prompt_enabled",
+        "pre_prompt_enabled",
         "system_prompt_id",
         "user_profile_id"
       ],
+      "type": "object"
+    },
+    "ChatSessionCreate": {
+      "properties": {
+        "character_id": {
+          "description": "Character ID for this session",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "character_id"
+      ],
+      "type": "object"
+    },
+    "ChatSessionResponse": {
+      "properties": {
+        "data": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/ChatSession"
+            }
+          ],
+          "description": "Chat session data"
+        },
+        "error": {
+          "description": "Error information, if any",
+          "type": "object"
+        },
+        "meta": {
+          "description": "Additional metadata",
+          "type": "object"
+        },
+        "success": {
+          "default": true,
+          "description": "Success status",
+          "type": "boolean"
+        }
+      },
       "type": "object"
     },
     "ChatSessionUpdate": {
@@ -162,6 +248,10 @@
         "ai_model_id": {
           "description": "AI Model ID for this session",
           "type": "integer"
+        },
+        "formatting_settings": {
+          "description": "Text formatting settings as JSON object",
+          "type": "object"
         },
         "post_prompt": {
           "description": "Optional text to add after each AI request",
@@ -184,6 +274,18 @@
           "type": "integer"
         }
       },
+      "type": "object"
+    },
+    "FirstMessageInit": {
+      "properties": {
+        "content": {
+          "description": "Content of the first message to initialize",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ],
       "type": "object"
     },
     "Message": {
@@ -1010,11 +1112,11 @@
           "200": {
             "description": "Success",
             "schema": {
-              "$ref": "#/definitions/Response"
+              "$ref": "#/definitions/ChatSessionResponse"
             }
           }
         },
-        "summary": "Create a new chat session",
+        "summary": "Create a new chat session with default settings",
         "tags": [
           "chat-sessions"
         ]
@@ -1023,21 +1125,9 @@
     "/chat-sessions/character/{character_id}": {
       "get": {
         "operationId": "get_chat_sessions_by_character",
-        "parameters": [
-          {
-            "description": "An optional fields mask",
-            "format": "mask",
-            "in": "header",
-            "name": "X-Fields",
-            "type": "string"
-          }
-        ],
         "responses": {
           "200": {
-            "description": "Success",
-            "schema": {
-              "$ref": "#/definitions/Response"
-            }
+            "description": "Success"
           }
         },
         "summary": "Get chat sessions for a specific character",
@@ -1065,21 +1155,11 @@
             "in": "query",
             "name": "limit",
             "type": "integer"
-          },
-          {
-            "description": "An optional fields mask",
-            "format": "mask",
-            "in": "header",
-            "name": "X-Fields",
-            "type": "string"
           }
         ],
         "responses": {
           "200": {
-            "description": "Success",
-            "schema": {
-              "$ref": "#/definitions/Response"
-            }
+            "description": "Success"
           }
         },
         "summary": "Get recent chat sessions",
@@ -1087,41 +1167,6 @@
           "chat-sessions"
         ]
       }
-    },
-    "/chat-sessions/user-profile/{profile_id}": {
-      "get": {
-        "operationId": "get_chat_sessions_by_user_profile",
-        "parameters": [
-          {
-            "description": "An optional fields mask",
-            "format": "mask",
-            "in": "header",
-            "name": "X-Fields",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "schema": {
-              "$ref": "#/definitions/Response"
-            }
-          }
-        },
-        "summary": "Get chat sessions for a specific user profile",
-        "tags": [
-          "chat-sessions"
-        ]
-      },
-      "parameters": [
-        {
-          "description": "The user profile identifier",
-          "in": "path",
-          "name": "profile_id",
-          "required": true,
-          "type": "integer"
-        }
-      ]
     },
     "/chat-sessions/{id}": {
       "delete": {
@@ -1166,7 +1211,7 @@
           "200": {
             "description": "Success",
             "schema": {
-              "$ref": "#/definitions/Response"
+              "$ref": "#/definitions/ChatSessionResponse"
             }
           },
           "404": {
@@ -1210,7 +1255,7 @@
           "200": {
             "description": "Success",
             "schema": {
-              "$ref": "#/definitions/Response"
+              "$ref": "#/definitions/ChatSessionResponse"
             }
           },
           "404": {
@@ -1218,6 +1263,97 @@
           }
         },
         "summary": "Update a chat session",
+        "tags": [
+          "chat-sessions"
+        ]
+      }
+    },
+    "/chat-sessions/{id}/formatting": {
+      "parameters": [
+        {
+          "description": "The chat session identifier",
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "put": {
+        "operationId": "update_chat_session_formatting",
+        "parameters": [
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "Chat session not found"
+          }
+        },
+        "summary": "Update formatting settings for a chat session",
+        "tags": [
+          "chat-sessions"
+        ]
+      }
+    },
+    "/chat-sessions/{id}/initialize-first-message": {
+      "parameters": [
+        {
+          "description": "The chat session identifier",
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "post": {
+        "description": "This endpoint is used when a character has multiple first messages and the user\nneeds to select which one to use for the chat session. Once initialized, the\nsession will have first_message_initialized=true and normal chat can proceed.",
+        "operationId": "initialize_first_message",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "payload",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/FirstMessageInit"
+            }
+          },
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "400": {
+            "description": "Validation error - session already initialized or invalid content"
+          },
+          "404": {
+            "description": "Chat session not found"
+          }
+        },
+        "summary": "Initialize the first message for a chat session",
         "tags": [
           "chat-sessions"
         ]
@@ -1270,7 +1406,39 @@
           "required": true,
           "type": "integer"
         }
-      ]
+      ],
+      "post": {
+        "description": "Args:\n    chat_session_id: The chat session ID\n\nReturns:\n    The created message data",
+        "operationId": "create_message",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "payload",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MessageCreate"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Message created",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "Chat session not found"
+          }
+        },
+        "summary": "Create a new message in a chat session",
+        "tags": [
+          "messages"
+        ]
+      }
     },
     "/messages/chat-sessions/{chat_session_id}/latest": {
       "get": {
@@ -1343,7 +1511,7 @@
         }
       ],
       "post": {
-        "description": "Send a user message and receive an AI-generated response. Supports both streaming (SSE) and non-streaming modes.\nWhen stream=true (default):\n- Returns Server-Sent Events stream\n- Content-Type: text/event-stream\n- Events format:\n  - data: {\"type\": \"content\", \"data\": \"chunk of text\"}\n  - data: {\"type\": \"done\"}\n  - data: {\"type\": \"error\", \"error\": \"error message\"}\n  \nWhen stream=false:\n- Returns JSON with both messages\n- Content-Type: application/json\n\nNote: Non-streaming mode is not implemented yet.",
+        "description": "Send a user message and receive an AI-generated response. Supports both streaming (SSE) and non-streaming modes.\nWhen stream=true (default):\n- Returns Server-Sent Events stream\n- Content-Type: text/event-stream\n- Events format:\n  - data: {\"type\": \"user_message_saved\", \"user_message_id\": 123}\n  - data: {\"type\": \"content\", \"data\": \"chunk of text\"}\n  - data: {\"type\": \"done\", \"ai_message_id\": 124}\n  - data: {\"type\": \"error\", \"error\": \"error message\"}\n\nWhen stream=false:\n- Returns JSON with both messages\n- Content-Type: application/json\n\nNote: Non-streaming mode is not implemented yet.",
         "operationId": "send_message",
         "parameters": [
           {
@@ -1444,6 +1612,25 @@
       }
     },
     "/messages/{message_id}": {
+      "delete": {
+        "description": "When a message is deleted, all messages that came after it in the\nconversation are also deleted to maintain conversation flow integrity.\n\nArgs:\n    message_id: The message ID\n\nReturns:\n    Success message with count of deleted messages",
+        "operationId": "delete_message",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "404": {
+            "description": "Message not found"
+          }
+        },
+        "summary": "Delete a message and all subsequent messages",
+        "tags": [
+          "messages"
+        ]
+      },
       "get": {
         "description": "Args:\n    message_id: The message ID\n\nReturns:\n    The message data",
         "operationId": "get_message",
@@ -1471,7 +1658,39 @@
           "required": true,
           "type": "integer"
         }
-      ]
+      ],
+      "put": {
+        "description": "Only the content can be updated, not the role or chat session.\n\nArgs:\n    message_id: The message ID\n\nReturns:\n    The updated message data",
+        "operationId": "update_message",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "payload",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MessageUpdate"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "Message not found"
+          }
+        },
+        "summary": "Update a message",
+        "tags": [
+          "messages"
+        ]
+      }
     },
     "/settings/": {
       "get": {
@@ -1518,6 +1737,61 @@
           }
         },
         "summary": "Update the application settings",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/settings/default-formatting-rules": {
+      "get": {
+        "description": "Returns:\n    The default formatting rules as JSON",
+        "operationId": "get_default_formatting_rules",
+        "parameters": [
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          }
+        },
+        "summary": "Get default formatting rules",
+        "tags": [
+          "settings"
+        ]
+      },
+      "put": {
+        "description": "Returns:\n    Success confirmation",
+        "operationId": "update_default_formatting_rules",
+        "parameters": [
+          {
+            "description": "An optional fields mask",
+            "format": "mask",
+            "in": "header",
+            "name": "X-Fields",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Response"
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          }
+        },
+        "summary": "Update default formatting rules",
         "tags": [
           "settings"
         ]

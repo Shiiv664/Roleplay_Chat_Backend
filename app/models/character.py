@@ -6,7 +6,7 @@ that can be used in roleplay chat sessions.
 
 from typing import TYPE_CHECKING, List
 
-from sqlalchemy import Column, Integer, String, Text
+from sqlalchemy import JSON, Column, Integer, String, Text
 from sqlalchemy.orm import Mapped, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -35,6 +35,7 @@ class Character(Base, TimestampMixin):
     name: Mapped[str] = Column(String, nullable=False)
     avatar_image: Mapped[str] = Column(String, nullable=True)
     description: Mapped[str] = Column(Text, nullable=True)
+    first_messages: Mapped[list] = Column(JSON, nullable=True, default=[])
 
     # Relationships
     chat_sessions: "Mapped[List['ChatSession']]" = relationship(

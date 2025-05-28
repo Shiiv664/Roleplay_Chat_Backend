@@ -45,6 +45,7 @@ def serialize_character(character):
         "description": character.description,
         "avatar_image": character.avatar_image,
         "avatar_url": character.get_avatar_url(),
+        "first_messages": character.first_messages or [],
         "created_at": (
             character.created_at.isoformat() if character.created_at else None
         ),
@@ -166,10 +167,23 @@ class CharacterList(Resource):
                 name = request.form.get("name")
                 description = request.form.get("description")
                 avatar_file = request.files.get("avatar_image")
+                first_messages_str = request.form.get("first_messages")
 
                 # Validate required fields
                 if not label or not name:
                     raise ValidationError("Label and name are required")
+
+                # Parse first_messages JSON string if provided
+                first_messages = []
+                if first_messages_str:
+                    try:
+                        import json
+
+                        first_messages = json.loads(first_messages_str)
+                        if not isinstance(first_messages, list):
+                            raise ValidationError("first_messages must be a JSON array")
+                    except json.JSONDecodeError:
+                        raise ValidationError("Invalid JSON format for first_messages")
 
                 # Handle file upload if provided
                 if avatar_file and avatar_file.filename:
@@ -186,6 +200,7 @@ class CharacterList(Resource):
                     "name": name,
                     "description": description,
                     "avatar_image": avatar_image_path,
+                    "first_messages": first_messages,
                 }
             else:
                 # Handle JSON request
@@ -204,6 +219,7 @@ class CharacterList(Resource):
                     name=data.get("name"),
                     description=data.get("description"),
                     avatar_image=data.get("avatar_image"),
+                    first_messages=data.get("first_messages"),
                 )
 
                 # Commit the transaction
@@ -262,6 +278,7 @@ class CharacterItem(Resource):
                     name=data.get("name"),
                     description=data.get("description"),
                     avatar_image=data.get("avatar_image"),
+                    first_messages=data.get("first_messages"),
                 )
 
                 # Commit the transaction
