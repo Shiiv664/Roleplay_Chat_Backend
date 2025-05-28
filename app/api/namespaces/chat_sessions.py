@@ -204,6 +204,7 @@ class ChatSessionItem(Resource):
                 # Update chat session
                 chat_session = chat_session_service.update_session(
                     session_id=id,
+                    user_profile_id=data.get("user_profile_id"),
                     ai_model_id=data.get("ai_model_id"),
                     system_prompt_id=data.get("system_prompt_id"),
                     pre_prompt=data.get("pre_prompt"),

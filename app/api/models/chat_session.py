@@ -63,6 +63,9 @@ chat_session_create_model = Model(
 chat_session_update_model = Model(
     "ChatSessionUpdate",
     {
+        "user_profile_id": fields.Integer(
+            required=False, description="User Profile ID for this session"
+        ),
         "ai_model_id": fields.Integer(
             required=False, description="AI Model ID for this session"
         ),
