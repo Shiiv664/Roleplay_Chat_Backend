@@ -243,12 +243,14 @@ class TestChatSessionsAPI:
         # Verify service was called with correct arguments
         mock_chat_session_service.update_session.assert_called_once_with(
             session_id=sample_chat_session.id,
+            user_profile_id=None,
             ai_model_id=301,
             system_prompt_id=401,
-            pre_prompt_enabled=False,
             pre_prompt=None,
+            pre_prompt_enabled=False,
             post_prompt=None,
             post_prompt_enabled=None,
+            formatting_settings=None,
         )
 
     def test_update_chat_session_not_found(self, client, mock_chat_session_service):
