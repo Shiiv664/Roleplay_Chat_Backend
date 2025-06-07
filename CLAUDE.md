@@ -14,7 +14,7 @@ alembic revision --autogenerate -m "description"
 alembic upgrade head
 
 # Run the application
-PYTHONPATH=. poetry run python app.py
+PYTHONPATH=. poetry run python ./app.py
 poetry run flask run --host=0.0.0.0 --port=8000
 ```
 
