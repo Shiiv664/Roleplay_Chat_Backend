@@ -34,6 +34,10 @@ poetry run pytest -v
 poetry run pytest tests/models/test_character.py
 poetry run pytest tests/models/test_character.py::test_character_initialization
 poetry run pytest --cov=app --cov-report=html
+
+# Validate API documentation consistency (prevents sync issues)
+python scripts/validate_api_docs.py --verbose
+poetry run pytest tests/api/test_api_documentation.py -v
 ```
 
 ## Architecture Overview
