@@ -46,6 +46,8 @@ def test_chat_session_columns():
         "pre_prompt_enabled",
         "post_prompt",
         "post_prompt_enabled",
+        "formatting_settings",
+        "first_message_initialized",
         "character",
         "user_profile",
         "ai_model",
@@ -97,6 +99,16 @@ def test_chat_session_columns():
 
     check_column_constraints(
         ChatSession, "post_prompt_enabled", nullable=False, column_type=Boolean
+    )
+
+    # Test formatting settings field
+    check_column_constraints(
+        ChatSession, "formatting_settings", nullable=True, column_type=Text
+    )
+
+    # Test first message initialized field
+    check_column_constraints(
+        ChatSession, "first_message_initialized", nullable=False, column_type=Boolean
     )
 
 

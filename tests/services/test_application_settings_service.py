@@ -556,6 +556,7 @@ class TestApplicationSettingsService:
             default_system_prompt_id=None,
             default_user_profile_id=None,
             default_avatar_image=None,
+            default_formatting_rules=None,
         )
 
     # OpenRouter API Key Tests

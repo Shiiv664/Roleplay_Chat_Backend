@@ -149,11 +149,12 @@ class TestSendMessageEndpoint:
                 events.append(json.loads(line[6:]))
 
         # Verify events
-        assert len(events) == 4  # 3 content + 1 done
-        assert events[0] == {"type": "content", "data": "Hello"}
-        assert events[1] == {"type": "content", "data": " from"}
-        assert events[2] == {"type": "content", "data": " Bob!"}
-        assert events[3] == {"type": "done"}
+        assert len(events) == 5  # 1 user_message_saved + 3 content + 1 done
+        assert events[0] == {"type": "user_message_saved", "user_message_id": 1}
+        assert events[1] == {"type": "content", "data": "Hello"}
+        assert events[2] == {"type": "content", "data": " from"}
+        assert events[3] == {"type": "content", "data": " Bob!"}
+        assert events[4] == {"type": "done", "ai_message_id": 2}
 
         # Verify messages were saved
         messages = (

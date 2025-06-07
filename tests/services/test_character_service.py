@@ -111,6 +111,7 @@ class TestCharacterService:
             name="New Character",
             avatar_image=None,
             description="New description",
+            first_messages=None,
         )
 
     def test_create_character_label_exists(

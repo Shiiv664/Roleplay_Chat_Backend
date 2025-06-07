@@ -150,6 +150,7 @@ class TestCharactersAPI:
             name="New Character",
             description="A new character for testing",
             avatar_image=None,
+            first_messages=None,
         )
 
     def test_create_character_validation_error(self, client, mock_character_service):
@@ -220,10 +221,11 @@ class TestCharactersAPI:
         # Verify service was called with correct arguments
         mock_character_service.update_character.assert_called_once_with(
             character_id=sample_character.id,
+            label=None,
             name="Updated Character",
             description="Updated description",
-            label=None,
             avatar_image=None,
+            first_messages=None,
         )
 
     def test_update_character_not_found(self, client, mock_character_service):

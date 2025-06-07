@@ -251,7 +251,13 @@ class TestGenerateStreamingResponse:
             chunks.append(chunk)
 
         # Verify
-        assert chunks == ["Hello", " world", "!"]
+        expected_chunks = [
+            {"type": "content", "data": "Hello"},
+            {"type": "content", "data": " world"},
+            {"type": "content", "data": "!"},
+            {"type": "done", "ai_message_id": 1},
+        ]
+        assert chunks == expected_chunks
         assert message_repo.create.called
         saved_message = message_repo.create.call_args[1]
         assert saved_message["content"] == "Hello world!"
@@ -330,14 +336,17 @@ class TestGenerateStreamingResponse:
             openrouter_client=openrouter_client,
         )
 
-        # Collect chunks and expect error
+        # Collect chunks and expect error event
         chunks = []
-        with pytest.raises(Exception, match="Stream error"):
-            for chunk in service.generate_streaming_response(1, "Test", 1):
-                chunks.append(chunk)
+        for chunk in service.generate_streaming_response(1, "Test", 1):
+            chunks.append(chunk)
 
-        # Verify partial response was saved with error message
-        assert chunks == ["Partial"]
+        # Verify partial response and error event
+        expected_chunks = [
+            {"type": "content", "data": "Partial"},
+            {"type": "error", "error": "Stream error"},
+        ]
+        assert chunks == expected_chunks
         assert message_repo.create.called
         saved_message = message_repo.create.call_args[1]
         assert "Partial" in saved_message["content"]
