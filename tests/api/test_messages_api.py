@@ -22,6 +22,87 @@ def mock_message_service():
 
 
 @pytest.fixture
+def mock_db_session_for_update_delete(mock_message_service):
+    """Mock get_db_session for PUT/DELETE methods that create their own service instances."""
+    with patch("app.utils.db.get_db_session") as mock_get_db_session:
+        # Create a mock session
+        mock_session = MagicMock()
+
+        # Create a context manager that yields the mock session
+        class MockSessionContext:
+            def __enter__(self):
+                return mock_session
+
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                if exc_type is not None:
+                    mock_session.rollback.return_value = None
+                else:
+                    mock_session.commit.return_value = None
+                mock_session.close.return_value = None
+
+        mock_get_db_session.return_value = MockSessionContext()
+
+        # Mock the repositories and service creation within the session context
+        with patch(
+            "app.repositories.message_repository.MessageRepository"
+        ) as mock_message_repo_class:
+            with patch(
+                "app.repositories.chat_session_repository.ChatSessionRepository"
+            ) as mock_chat_repo_class:
+                with patch(
+                    "app.repositories.application_settings_repository.ApplicationSettingsRepository"
+                ):
+                    with patch(
+                        "app.repositories.ai_model_repository.AIModelRepository"
+                    ):
+                        with patch(
+                            "app.repositories.system_prompt_repository.SystemPromptRepository"
+                        ):
+                            with patch(
+                                "app.repositories.user_profile_repository.UserProfileRepository"
+                            ):
+                                with patch(
+                                    "app.services.application_settings_service.ApplicationSettingsService"
+                                ) as mock_settings_service_class:
+                                    with patch(
+                                        "app.services.message_service.MessageService"
+                                    ) as mock_message_service_class:
+
+                                        # Configure repository mocks
+                                        mock_message_repo = MagicMock()
+                                        mock_chat_repo = MagicMock()
+                                        mock_message_repo_class.return_value = (
+                                            mock_message_repo
+                                        )
+                                        mock_chat_repo_class.return_value = (
+                                            mock_chat_repo
+                                        )
+
+                                        # Configure service mocks
+                                        mock_settings_service_instance = MagicMock()
+                                        mock_settings_service_instance.get_openrouter_api_key.return_value = (
+                                            "fake_key"
+                                        )
+                                        mock_settings_service_class.return_value = (
+                                            mock_settings_service_instance
+                                        )
+
+                                        # Configure MessageService mock to delegate to the original mock_message_service
+                                        mock_service_instance = MagicMock()
+                                        mock_service_instance.update_message = (
+                                            mock_message_service.update_message
+                                        )
+                                        mock_service_instance.delete_message = (
+                                            mock_message_service.delete_message
+                                        )
+                                        mock_message_service_class.return_value = (
+                                            mock_service_instance
+                                        )
+
+                                        yield mock_session
+
+
+@pytest.fixture
 def sample_message_data():
     """Sample message data for testing."""
     return {
@@ -124,7 +205,13 @@ class TestMessagesAPI:
         # Verify service was called
         mock_message_service.get_message.assert_called_once_with(999)
 
-    def test_update_message(self, client, mock_message_service, sample_message):
+    def test_update_message(
+        self,
+        client,
+        mock_message_service,
+        sample_message,
+        mock_db_session_for_update_delete,
+    ):
         """Test updating a message."""
         # New content for update
         new_content = "This is the updated message content."
@@ -183,7 +270,11 @@ class TestMessagesAPI:
         assert data["error"]["code"] == "RESOURCE_NOT_FOUND"
 
     def test_update_message_validation_error(
-        self, client, mock_message_service, sample_message
+        self,
+        client,
+        mock_message_service,
+        sample_message,
+        mock_db_session_for_update_delete,
     ):
         """Test validation error when updating a message."""
         # Configure the mock to raise a validation error
@@ -207,7 +298,13 @@ class TestMessagesAPI:
         assert data["error"]["code"] == "VALIDATION_ERROR"
         assert data["error"]["details"]["content"] == "Content must not be empty"
 
-    def test_delete_message(self, client, mock_message_service, sample_message):
+    def test_delete_message(
+        self,
+        client,
+        mock_message_service,
+        sample_message,
+        mock_db_session_for_update_delete,
+    ):
         """Test deleting a message."""
         # Configure the mock to return a count of deleted messages
         mock_message_service.delete_message.return_value = 3  # 3 messages deleted

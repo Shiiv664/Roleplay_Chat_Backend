@@ -192,16 +192,69 @@ class MessageResource(Resource):
         Returns:
             The updated message data
         """
+        from app.utils.db import get_db_session
+
         try:
             content = request.json.get("content")
 
-            message_service = get_message_service()
-            message = message_service.update_message(message_id, content)
+            with get_db_session() as session:
+                # Create message service with the managed session
+                from app.repositories.ai_model_repository import AIModelRepository
+                from app.repositories.application_settings_repository import (
+                    ApplicationSettingsRepository,
+                )
+                from app.repositories.chat_session_repository import (
+                    ChatSessionRepository,
+                )
+                from app.repositories.message_repository import MessageRepository
+                from app.repositories.system_prompt_repository import (
+                    SystemPromptRepository,
+                )
+                from app.repositories.user_profile_repository import (
+                    UserProfileRepository,
+                )
+                from app.services.application_settings_service import (
+                    ApplicationSettingsService,
+                )
+                from app.services.message_service import MessageService
+                from app.services.openrouter.client import OpenRouterClient
 
-            return {
-                "success": True,
-                "data": format_message_data(message),
-            }
+                message_repo = MessageRepository(session)
+                chat_session_repo = ChatSessionRepository(session)
+
+                # Create settings service
+                settings_repo = ApplicationSettingsRepository(session)
+                settings_service = ApplicationSettingsService(
+                    settings_repo,
+                    AIModelRepository(session),
+                    SystemPromptRepository(session),
+                    UserProfileRepository(session),
+                )
+
+                # Create OpenRouter client with API key
+                api_key = settings_service.get_openrouter_api_key()
+                if not api_key:
+                    openrouter_client = None
+                else:
+                    openrouter_client = OpenRouterClient(api_key=api_key)
+
+                message_service = MessageService(
+                    message_repo,
+                    chat_session_repo,
+                    settings_service=settings_service,
+                    openrouter_client=openrouter_client,
+                )
+
+                message = message_service.update_message(message_id, content)
+
+                # Format the response while the session is still active
+                response_data = format_message_data(message)
+
+                # Session automatically commits on successful completion
+                return {
+                    "success": True,
+                    "data": response_data,
+                }
         except ValidationError as e:
             return error_response(400, e.message, "VALIDATION_ERROR", e.details)
         except ResourceNotFoundError as e:
@@ -227,17 +280,67 @@ class MessageResource(Resource):
         Returns:
             Success message with count of deleted messages
         """
-        try:
-            message_service = get_message_service()
-            deleted_count = message_service.delete_message(message_id)
+        from app.utils.db import get_db_session
 
-            return {
-                "success": True,
-                "data": {
-                    "message": f"Successfully deleted {deleted_count} message(s)",
-                    "deleted_count": deleted_count,
-                },
-            }
+        try:
+            with get_db_session() as session:
+                # Create message service with the managed session
+                from app.repositories.ai_model_repository import AIModelRepository
+                from app.repositories.application_settings_repository import (
+                    ApplicationSettingsRepository,
+                )
+                from app.repositories.chat_session_repository import (
+                    ChatSessionRepository,
+                )
+                from app.repositories.message_repository import MessageRepository
+                from app.repositories.system_prompt_repository import (
+                    SystemPromptRepository,
+                )
+                from app.repositories.user_profile_repository import (
+                    UserProfileRepository,
+                )
+                from app.services.application_settings_service import (
+                    ApplicationSettingsService,
+                )
+                from app.services.message_service import MessageService
+                from app.services.openrouter.client import OpenRouterClient
+
+                message_repo = MessageRepository(session)
+                chat_session_repo = ChatSessionRepository(session)
+
+                # Create settings service
+                settings_repo = ApplicationSettingsRepository(session)
+                settings_service = ApplicationSettingsService(
+                    settings_repo,
+                    AIModelRepository(session),
+                    SystemPromptRepository(session),
+                    UserProfileRepository(session),
+                )
+
+                # Create OpenRouter client with API key
+                api_key = settings_service.get_openrouter_api_key()
+                if not api_key:
+                    openrouter_client = None
+                else:
+                    openrouter_client = OpenRouterClient(api_key=api_key)
+
+                message_service = MessageService(
+                    message_repo,
+                    chat_session_repo,
+                    settings_service=settings_service,
+                    openrouter_client=openrouter_client,
+                )
+
+                deleted_count = message_service.delete_message(message_id)
+
+                # Session automatically commits on successful completion
+                return {
+                    "success": True,
+                    "data": {
+                        "message": f"Successfully deleted {deleted_count} message(s)",
+                        "deleted_count": deleted_count,
+                    },
+                }
         except ResourceNotFoundError as e:
             return error_response(404, e.message, "RESOURCE_NOT_FOUND")
         except DatabaseError as e:
