@@ -26,6 +26,7 @@ from app.repositories.user_profile_repository import UserProfileRepository
 from app.services.character_service import CharacterService
 from app.services.chat_session_service import ChatSessionService
 from app.services.file_upload_service import FileUploadError, FileUploadService
+from app.services.character_extract_service import CharacterExtractService
 from app.utils.db import get_db_session
 from app.utils.exceptions import ValidationError
 
@@ -364,4 +365,105 @@ class CharacterSearch(Resource):
 
         except Exception as e:
             logger.exception("Error searching characters")
+            return handle_exception(e)
+
+
+@api.route("/extract-png")
+class CharacterExtractPng(Resource):
+    """Resource for extracting character data from PNG files."""
+
+    @api.doc(
+        "extract_character_from_png",
+        responses={
+            200: "Character data extracted successfully",
+            400: "Bad request - invalid PNG file or no character data",
+            413: "File too large",
+            500: "Internal server error",
+        },
+        params={
+            "Content-Type": {
+                "in": "header",
+                "description": "Must be multipart/form-data",
+                "type": "string",
+                "required": True,
+                "default": "multipart/form-data",
+            }
+        },
+    )
+    @api.marshal_with(response_model)
+    def post(self):
+        """Extract character data from a PNG file containing Character Card v2 metadata.
+        
+        ## Overview
+        This endpoint extracts character data from PNG files that contain embedded 
+        Character Card v2 format metadata (chub.ai format) and returns both the 
+        parsed character data and a clean avatar image.
+        
+        ## Request Format
+        - **Content-Type**: multipart/form-data
+        - **file**: PNG file with embedded Character Card v2 data (required)
+        
+        ## File Requirements
+        - Format: PNG only
+        - Maximum size: 10MB
+        - Must contain Character Card v2 metadata in tEXt chunks
+        - Valid image dimensions (32x32 to 2048x2048 pixels)
+        
+        ## Response Format
+        Returns extracted character data ready for import:
+        - **character_data**: Mapped character information (name, description, first_messages)
+        - **avatar_image**: Clean PNG image without metadata (base64-encoded)
+        - **extraction_info**: Metadata about the extraction process
+        
+        ## Character Card v2 Mapping
+        - `data.name` → `name` (required)
+        - `data.description` → `description` (required) 
+        - `data.first_mes` → `first_messages[0]`
+        - `data.alternate_greetings[]` → `first_messages[1:]`
+        - PNG image → Clean avatar image (metadata stripped)
+        - Auto-generated `label` from name + timestamp
+        
+        ## Error Codes
+        - **INVALID_FILE_FORMAT** (400): Not a valid PNG file
+        - **NO_CHARACTER_DATA** (400): PNG contains no Character Card v2 metadata
+        - **INVALID_CHARACTER_DATA** (400): Character data is corrupted or invalid
+        - **FILE_TOO_LARGE** (413): File exceeds 10MB limit
+        - **PROCESSING_ERROR** (500): Internal error during extraction
+        
+        ## Usage Notes
+        - This endpoint extracts data only - no database operations are performed
+        - Frontend should use extracted data to prefill character creation form
+        - Character creation happens through the normal POST /characters endpoint
+        - Extracted avatar can be used directly or re-uploaded during character creation
+        """
+        try:
+            # Validate request format
+            if not request.content_type or "multipart/form-data" not in request.content_type:
+                raise ValidationError("INVALID_REQUEST_FORMAT", "Content-Type must be multipart/form-data")
+            
+            # Get uploaded file
+            uploaded_file = request.files.get("file")
+            if not uploaded_file or not uploaded_file.filename:
+                raise ValidationError("NO_FILE_PROVIDED", "PNG file is required")
+            
+            # Validate filename extension
+            if not uploaded_file.filename.lower().endswith('.png'):
+                raise ValidationError("INVALID_FILE_FORMAT", "File must be a PNG image")
+            
+            # Read file data
+            file_data = uploaded_file.read()
+            
+            # Create extraction service
+            extract_service = CharacterExtractService()
+            
+            # Validate extraction request
+            extract_service.validate_extraction_request(file_data, uploaded_file.filename)
+            
+            # Extract character data
+            extraction_result = extract_service.extract_character_from_png(file_data, uploaded_file.filename)
+            
+            return create_response(data=extraction_result)
+            
+        except Exception as e:
+            logger.exception("Error extracting character from PNG")
             return handle_exception(e)

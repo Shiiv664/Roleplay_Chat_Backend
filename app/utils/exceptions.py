@@ -25,7 +25,19 @@ class DatabaseError(AppError):
 class ValidationError(AppError):
     """Exception raised for data validation errors."""
 
-    pass
+    def __init__(self, error_code, message, details=None):
+        """Initialize validation error with error code.
+        
+        Args:
+            error_code: Error code for the validation error
+            message: Human-readable error message
+            details: Optional dictionary of additional error details
+        """
+        self.error_code = error_code
+        super().__init__(message, details)
+        
+    def __str__(self):
+        return f"{self.error_code}: {self.message}"
 
 
 class ResourceNotFoundError(AppError):
@@ -42,5 +54,11 @@ class ExternalAPIError(AppError):
 
 class BusinessRuleError(AppError):
     """Exception raised for business rule violations."""
+
+    pass
+
+
+class ProcessingError(AppError):
+    """Exception raised for processing errors during data manipulation."""
 
     pass
