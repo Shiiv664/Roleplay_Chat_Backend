@@ -128,7 +128,7 @@ uploads/
 test_uploads/
 
 # Test data
-@.test-data/
+.test-data/
 
 # Encryption key file
 encryption.key
