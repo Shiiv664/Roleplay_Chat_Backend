@@ -71,6 +71,7 @@ def get_message_service() -> MessageService:
     from app.repositories.user_profile_repository import UserProfileRepository
     from app.services.application_settings_service import ApplicationSettingsService
     from app.services.openrouter.client import OpenRouterClient
+    from app.services.claudecode.client import ClaudeCodeClient
     from app.utils.db import get_session
 
     db_session = get_session()
@@ -94,11 +95,15 @@ def get_message_service() -> MessageService:
     else:
         openrouter_client = OpenRouterClient(api_key=api_key)
 
+    # Create Claude Code client (always available)
+    claudecode_client = ClaudeCodeClient()
+
     return MessageService(
         message_repo,
         chat_session_repo,
         settings_service=settings_service,
         openrouter_client=openrouter_client,
+        claudecode_client=claudecode_client,
     )
 
 
@@ -218,6 +223,7 @@ class MessageResource(Resource):
                 )
                 from app.services.message_service import MessageService
                 from app.services.openrouter.client import OpenRouterClient
+                from app.services.claudecode.client import ClaudeCodeClient
 
                 message_repo = MessageRepository(session)
                 chat_session_repo = ChatSessionRepository(session)
@@ -238,11 +244,15 @@ class MessageResource(Resource):
                 else:
                     openrouter_client = OpenRouterClient(api_key=api_key)
 
+                # Create Claude Code client (always available)
+                claudecode_client = ClaudeCodeClient()
+
                 message_service = MessageService(
                     message_repo,
                     chat_session_repo,
                     settings_service=settings_service,
                     openrouter_client=openrouter_client,
+                    claudecode_client=claudecode_client,
                 )
 
                 message = message_service.update_message(message_id, content)
@@ -304,6 +314,7 @@ class MessageResource(Resource):
                 )
                 from app.services.message_service import MessageService
                 from app.services.openrouter.client import OpenRouterClient
+                from app.services.claudecode.client import ClaudeCodeClient
 
                 message_repo = MessageRepository(session)
                 chat_session_repo = ChatSessionRepository(session)
@@ -324,11 +335,15 @@ class MessageResource(Resource):
                 else:
                     openrouter_client = OpenRouterClient(api_key=api_key)
 
+                # Create Claude Code client (always available)
+                claudecode_client = ClaudeCodeClient()
+
                 message_service = MessageService(
                     message_repo,
                     chat_session_repo,
                     settings_service=settings_service,
                     openrouter_client=openrouter_client,
+                    claudecode_client=claudecode_client,
                 )
 
                 deleted_count = message_service.delete_message(message_id)
@@ -420,9 +435,11 @@ class SendMessageResource(Resource):
                 if not message_service.settings_service:
                     raise BusinessRuleError("Settings service not available")
 
-                api_key = message_service.settings_service.get_openrouter_api_key()
-                if not api_key:
-                    raise BusinessRuleError("OpenRouter API key not configured")
+                # For non-ClaudeCode models, require OpenRouter API key
+                if chat_session.ai_model.label != "ClaudeCode":
+                    api_key = message_service.settings_service.get_openrouter_api_key()
+                    if not api_key:
+                        raise BusinessRuleError("OpenRouter API key not configured")
 
             except (ResourceNotFoundError, BusinessRuleError):
                 # Let these specific errors bubble up to be handled by the outer try-catch

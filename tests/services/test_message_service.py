@@ -1,12 +1,17 @@
 """Tests for the MessageService class."""
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
+from app.models.ai_model import AIModel
+from app.models.character import Character
+from app.models.chat_session import ChatSession
 from app.models.message import Message, MessageRole
+from app.models.system_prompt import SystemPrompt
+from app.models.user_profile import UserProfile
 from app.services.message_service import MessageService
-from app.utils.exceptions import ResourceNotFoundError, ValidationError
+from app.utils.exceptions import BusinessRuleError, ResourceNotFoundError, ValidationError
 
 
 class TestMessageService:
@@ -724,3 +729,258 @@ class TestMessageService:
         # Verify repository methods were not called
         mock_message_repository.delete_message_and_subsequent.assert_not_called()
         mock_chat_session_repository.update_session_timestamp.assert_not_called()
+
+
+class TestMessageServiceClaudeCodeIntegration:
+    """Test the MessageService Claude Code integration functionality."""
+
+    @pytest.fixture
+    def mock_message_repository(self):
+        """Create a mock message repository."""
+        return MagicMock()
+
+    @pytest.fixture
+    def mock_chat_session_repository(self):
+        """Create a mock chat session repository."""
+        return MagicMock()
+
+    @pytest.fixture
+    def mock_claudecode_client(self):
+        """Create a mock Claude Code client."""
+        return MagicMock()
+
+    @pytest.fixture
+    def mock_settings_service(self):
+        """Create a mock settings service."""
+        return MagicMock()
+
+    @pytest.fixture
+    def claudecode_service(
+        self,
+        mock_message_repository,
+        mock_chat_session_repository,
+        mock_claudecode_client,
+        mock_settings_service,
+    ):
+        """Create a MessageService with Claude Code client."""
+        return MessageService(
+            mock_message_repository,
+            mock_chat_session_repository,
+            settings_service=mock_settings_service,
+            openrouter_client=None,
+            claudecode_client=mock_claudecode_client,
+        )
+
+    @pytest.fixture
+    def claudecode_chat_session(self):
+        """Create a mock chat session with ClaudeCode AI model."""
+        ai_model = AIModel(id=1, label="ClaudeCode", description="Claude Code CLI")
+        character = Character(
+            id=1, 
+            label="test_char", 
+            name="Test Character",
+            description="A test character"
+        )
+        user_profile = UserProfile(
+            id=1,
+            label="test_user",
+            name="Test User", 
+            description="A test user"
+        )
+        system_prompt = SystemPrompt(
+            id=1,
+            label="test_prompt",
+            content="You are a helpful assistant."
+        )
+        
+        chat_session = ChatSession(
+            id=1,
+            character_id=1,
+            user_profile_id=1,
+            ai_model_id=1,
+            system_prompt_id=1,
+            pre_prompt="Pre-prompt content",
+            pre_prompt_enabled=True,
+            post_prompt="Post-prompt content",
+            post_prompt_enabled=True,
+        )
+        
+        # Set up relationships
+        chat_session.ai_model = ai_model
+        chat_session.character = character
+        chat_session.user_profile = user_profile
+        chat_session.system_prompt = system_prompt
+        
+        return chat_session
+
+    def test_generate_streaming_response_routes_to_claude_code(
+        self,
+        claudecode_service,
+        mock_chat_session_repository,
+        claudecode_chat_session,
+    ):
+        """Test that ClaudeCode model routes to Claude Code implementation."""
+        # Setup
+        mock_chat_session_repository.get_by_id_with_relations.return_value = claudecode_chat_session
+        
+        # Mock the Claude Code specific method
+        with patch.object(claudecode_service, 'generate_streaming_response_claude_code') as mock_claude_method:
+            mock_claude_method.return_value = iter([{"type": "content", "data": "test"}])
+            
+            # Execute
+            result = list(claudecode_service.generate_streaming_response(1, "Hello"))
+            
+            # Verify Claude Code method was called
+            mock_claude_method.assert_called_once_with(1, "Hello", None)
+            assert result == [{"type": "content", "data": "test"}]
+
+    def test_generate_streaming_response_claude_code_success(
+        self,
+        claudecode_service,
+        mock_message_repository,
+        mock_chat_session_repository,
+        mock_claudecode_client,
+        claudecode_chat_session,
+    ):
+        """Test successful Claude Code streaming response."""
+        # Setup chat session
+        mock_chat_session_repository.get_by_id_with_relations.return_value = claudecode_chat_session
+        
+        # Setup user message creation
+        user_message = Message(
+            id=1,
+            chat_session_id=1,
+            role=MessageRole.USER,
+            content="Hello"
+        )
+        mock_message_repository.create.side_effect = [user_message]
+        
+        # Setup Claude Code streaming response
+        mock_claudecode_client.chat_completion_stream.return_value = [
+            {"type": "system", "message": "Starting Claude Code"},
+            {"type": "assistant", "message": {"content": [{"text": "Hello! "}]}},
+            {"type": "assistant", "message": {"content": [{"text": "How can I help you?"}]}},
+            {"type": "result", "usage": {"input_tokens": 10, "output_tokens": 5}}
+        ]
+        
+        # Setup AI message creation
+        ai_message = Message(
+            id=2,
+            chat_session_id=1,
+            role=MessageRole.ASSISTANT,
+            content="Hello! How can I help you?"
+        )
+        mock_message_repository.create.side_effect = [user_message, ai_message]
+        
+        # Execute
+        result = list(claudecode_service.generate_streaming_response_claude_code(1, "Hello"))
+        
+        # Verify
+        expected_events = [
+            {"type": "user_message_saved", "user_message_id": 1},
+            {"type": "content", "data": "Hello! "},
+            {"type": "content", "data": "How can I help you?"},
+            {"type": "done", "ai_message_id": 2}
+        ]
+        
+        assert result == expected_events
+        
+        # Verify Claude Code client was called with correct parameters
+        mock_claudecode_client.chat_completion_stream.assert_called_once()
+        call_args = mock_claudecode_client.chat_completion_stream.call_args
+        assert "You are a helpful assistant." in call_args[1]["system_prompt"]
+        assert "User: Hello" in call_args[1]["conversation_text"]
+
+    def test_generate_streaming_response_claude_code_no_client(
+        self,
+        mock_message_repository,
+        mock_chat_session_repository,
+        mock_settings_service,
+    ):
+        """Test Claude Code streaming when client is not available."""
+        # Setup service without Claude Code client
+        service = MessageService(
+            mock_message_repository,
+            mock_chat_session_repository,
+            settings_service=mock_settings_service,
+            openrouter_client=None,
+            claudecode_client=None,
+        )
+        
+        # Execute and verify exception
+        with pytest.raises(BusinessRuleError, match="Claude Code client not available"):
+            list(service.generate_streaming_response_claude_code(1, "Hello"))
+
+    def test_generate_streaming_response_claude_code_error_handling(
+        self,
+        claudecode_service,
+        mock_message_repository,
+        mock_chat_session_repository,
+        mock_claudecode_client,
+        claudecode_chat_session,
+    ):
+        """Test Claude Code streaming error handling."""
+        # Setup chat session
+        mock_chat_session_repository.get_by_id_with_relations.return_value = claudecode_chat_session
+        
+        # Setup user message creation
+        user_message = Message(
+            id=1,
+            chat_session_id=1,
+            role=MessageRole.USER,
+            content="Hello"
+        )
+        mock_message_repository.create.side_effect = [user_message]
+        
+        # Setup Claude Code client to raise exception
+        mock_claudecode_client.chat_completion_stream.side_effect = Exception("Claude Code failed")
+        
+        # Execute
+        result = list(claudecode_service.generate_streaming_response_claude_code(1, "Hello"))
+        
+        # Verify error event
+        assert any(event.get("type") == "error" for event in result)
+        assert any("Claude Code failed" in str(event.get("error", "")) for event in result)
+
+    def test_format_conversation_for_claude_code(
+        self,
+        claudecode_service,
+        mock_message_repository,
+    ):
+        """Test conversation formatting for Claude Code CLI."""
+        # Setup historical messages
+        history = [
+            Message(id=1, chat_session_id=1, role=MessageRole.USER, content="First message"),
+            Message(id=2, chat_session_id=1, role=MessageRole.ASSISTANT, content="First response"),
+            Message(id=3, chat_session_id=1, role=MessageRole.USER, content="Second message"),
+        ]
+        mock_message_repository.get_by_chat_session_id.return_value = history
+        
+        # Execute
+        result = claudecode_service.format_conversation_for_claude_code(1, "New message")
+        
+        # Verify
+        expected = (
+            "User: First message\n"
+            "Assistant: First response\n"
+            "User: Second message\n"
+            "User: New message"
+        )
+        
+        assert result == expected
+
+    def test_build_system_prompt_with_claude_code_session(
+        self,
+        claudecode_service,
+        claudecode_chat_session,
+    ):
+        """Test system prompt building for Claude Code session."""
+        # Execute
+        result = claudecode_service.build_system_prompt(claudecode_chat_session)
+        
+        # Verify all components are included
+        assert "Pre-prompt content" in result
+        assert "You are a helpful assistant." in result
+        assert "A test character" in result
+        assert "A test user" in result
+        assert "---" in result  # Separator

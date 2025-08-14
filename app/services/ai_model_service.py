@@ -185,6 +185,13 @@ class AIModelService:
         # Get current model to ensure it exists
         model = self.repository.get_by_id(model_id)
 
+        # Prevent deletion of ClaudeCode model
+        if model.label == "ClaudeCode":
+            raise BusinessRuleError(
+                "Cannot delete the ClaudeCode model",
+                details={"model_id": model_id, "label": model.label},
+            )
+
         # Check if there are any chat sessions with this model
         if hasattr(model, "chat_sessions"):
             chat_sessions_count = model.chat_sessions.count()

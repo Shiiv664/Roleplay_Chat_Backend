@@ -46,6 +46,10 @@ class Config:
     )
     OPENROUTER_MAX_RETRIES: int = int(os.getenv("OPENROUTER_MAX_RETRIES", "3"))
 
+    # Claude Code CLI configuration
+    CLAUDE_CODE_EXECUTABLE_PATH: str = os.getenv("CLAUDE_CODE_EXECUTABLE_PATH", "claude")
+    CLAUDE_CODE_TIMEOUT: int = int(os.getenv("CLAUDE_CODE_TIMEOUT", "120"))  # seconds
+
     # Encryption configuration
     ENCRYPTION_KEY: str = os.getenv("ENCRYPTION_KEY", "")
 

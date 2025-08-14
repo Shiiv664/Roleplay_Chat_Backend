@@ -128,6 +128,10 @@ def create_sample_ai_models(session: Session) -> List[AIModel]:
     """
     ai_models = [
         AIModel(
+            label="ClaudeCode",
+            description="Local Claude Code CLI integration with dynamic system prompts",
+        ),
+        AIModel(
             label="gpt-3.5-turbo",
             description="OpenAI's GPT-3.5 Turbo model for general purpose conversations.",
         ),
@@ -145,11 +149,19 @@ def create_sample_ai_models(session: Session) -> List[AIModel]:
         ),
     ]
 
+    created_models = []
     for ai_model in ai_models:
-        session.add(ai_model)
+        # Check if model with this label already exists
+        existing = session.query(AIModel).filter_by(label=ai_model.label).first()
+        if not existing:
+            session.add(ai_model)
+            created_models.append(ai_model)
+        else:
+            print(f"AI model '{ai_model.label}' already exists, skipping creation.")
+            created_models.append(existing)
 
     session.flush()
-    return ai_models
+    return created_models
 
 
 def create_sample_system_prompts(session: Session) -> List[SystemPrompt]:
