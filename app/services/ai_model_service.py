@@ -66,6 +66,8 @@ class AIModelService:
             DatabaseError: If a database error occurs
         """
         logger.info("Getting all AI models")
+        # Ensure system models exist
+        self._ensure_system_models()
         return self.repository.get_all()
 
     def search_models(self, query: str) -> List[AIModel]:
@@ -237,3 +239,18 @@ class AIModelService:
 
         if errors:
             raise ValidationError("AI model validation failed", details=errors)
+
+    def _ensure_system_models(self) -> None:
+        """Ensure that required system models exist in the database.
+        
+        This method creates system models that should always be available
+        in the system, such as the ClaudeCode model.
+        """
+        # ClaudeCode system model
+        claudecode_model = self.repository.get_by_label("ClaudeCode")
+        if not claudecode_model:
+            logger.info("Creating missing ClaudeCode system model")
+            self.repository.create(
+                label="ClaudeCode",
+                description="Local Claude Code CLI integration with dynamic system prompts"
+            )
