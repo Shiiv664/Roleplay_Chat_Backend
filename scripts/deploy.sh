@@ -62,8 +62,35 @@ fi
 
 echo -e "${YELLOW}Starting deployment process...${NC}"
 
-# Step 0: ARM ChromeOS Environment Setup
-echo -e "\n${BLUE}Step 0: ARM ChromeOS Environment Check${NC}"
+# Step 0: Check port availability early (before expensive operations)
+echo -e "\n${BLUE}Step 0: Pre-deployment validation${NC}"
+if [[ ! -f ".env.production" ]]; then
+    echo -e "${RED}✗ .env.production not found${NC}"
+    echo "Run: ./scripts/setup-environment.sh production"
+    exit 1
+fi
+
+port=$(grep "^FLASK_PORT=" .env.production | cut -d'=' -f2 || echo "8080")
+if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null; then
+    if $FORCE; then
+        echo -e "${YELLOW}⚠ Port $port in use, will attempt to start anyway (--force)${NC}"
+    else
+        echo -e "${RED}✗ Port $port is already in use${NC}"
+        echo -e "${YELLOW}Resolution options:${NC}"
+        echo "  1. Stop the service: lsof -Pi :$port -sTCP:LISTEN -t | xargs kill"
+        echo "  2. Change port in .env.production (edit FLASK_PORT=)"
+        echo "  3. Force override: $0 --force"
+        echo ""
+        echo "Process using port $port:"
+        lsof -Pi :$port -sTCP:LISTEN
+        exit 1
+    fi
+else
+    echo -e "${GREEN}✓ Port $port is available${NC}"
+fi
+
+# Step 1: ARM ChromeOS Environment Setup
+echo -e "\n${BLUE}Step 1: ARM ChromeOS Environment Check${NC}"
 if [[ -f "$SCRIPT_DIR/arm-chromeos-setup.sh" ]]; then
     "$SCRIPT_DIR/arm-chromeos-setup.sh" --check-only
     if [[ $? -ne 0 ]]; then
@@ -74,8 +101,8 @@ else
     echo -e "${YELLOW}⚠ ARM ChromeOS setup script not found, continuing without optimizations${NC}"
 fi
 
-# Step 1: Setup production environment
-echo -e "\n${BLUE}Step 1: Environment Setup${NC}"
+# Step 2: Setup production environment
+echo -e "\n${BLUE}Step 2: Environment Setup${NC}"
 if [[ ! -f ".env.production" ]]; then
     echo "Setting up production environment..."
     "$SCRIPT_DIR/setup-environment.sh" production
@@ -83,12 +110,12 @@ else
     echo -e "${GREEN}✓ Production environment exists${NC}"
 fi
 
-# Step 2: Build frontend (unless skipped)
+# Step 3: Build frontend (unless skipped)
 if ! $SKIP_BUILD; then
-    echo -e "\n${BLUE}Step 2: Building Frontend${NC}"
+    echo -e "\n${BLUE}Step 3: Building Frontend${NC}"
     "$SCRIPT_DIR/build-frontend.sh"
 else
-    echo -e "\n${BLUE}Step 2: Skipping Frontend Build${NC}"
+    echo -e "\n${BLUE}Step 3: Skipping Frontend Build${NC}"
     if [[ ! -d "frontend_build" ]] || [[ ! -f "frontend_build/index.html" ]]; then
         echo -e "${RED}Error: Frontend build not found and --skip-build specified${NC}"
         echo "Please run: ./scripts/build-frontend.sh"
@@ -97,8 +124,8 @@ else
     echo -e "${GREEN}✓ Using existing frontend build${NC}"
 fi
 
-# Step 3: Prepare production environment
-echo -e "\n${BLUE}Step 3: Production Preparation${NC}"
+# Step 4: Prepare production environment
+echo -e "\n${BLUE}Step 4: Production Preparation${NC}"
 
 # Install Python dependencies using Poetry (recommended) or pip fallback
 if [[ -f "pyproject.toml" ]] && command -v poetry >/dev/null 2>&1; then
@@ -138,8 +165,8 @@ if [[ -f "alembic.ini" ]]; then
     fi
 fi
 
-# Step 4: Pre-deployment validation
-echo -e "\n${BLUE}Step 4: Pre-deployment Validation${NC}"
+# Step 5: Pre-deployment validation
+echo -e "\n${BLUE}Step 5: Pre-deployment Validation${NC}"
 
 # Activate virtual environment for validation
 if [[ -d "venv" ]]; then
@@ -166,27 +193,12 @@ else
     exit 1
 fi
 
-# Check production port availability
-port=$(grep "^FLASK_PORT=" .env.production | cut -d'=' -f2 || echo "8080")
-if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null; then
-    if $FORCE; then
-        echo -e "${YELLOW}⚠ Port $port in use, will attempt to start anyway (--force)${NC}"
-    else
-        echo -e "${RED}✗ Port $port is already in use${NC}"
-        echo "Use --force to override or stop the service using that port"
-        lsof -Pi :$port -sTCP:LISTEN
-        exit 1
-    fi
-else
-    echo -e "${GREEN}✓ Port $port is available${NC}"
-fi
-
-# Step 5: Deploy production server
-echo -e "\n${BLUE}Step 5: Starting Production Server${NC}"
+# Step 6: Deploy production server
+echo -e "\n${BLUE}Step 6: Starting Production Server${NC}"
 "$SCRIPT_DIR/prod-start.sh"
 
-# Step 6: Post-deployment verification
-echo -e "\n${BLUE}Step 6: Post-deployment Verification${NC}"
+# Step 7: Post-deployment verification
+echo -e "\n${BLUE}Step 7: Post-deployment Verification${NC}"
 
 sleep 5  # Give server time to fully start
 
