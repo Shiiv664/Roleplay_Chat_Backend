@@ -63,6 +63,26 @@ A roleplay chat client application that allows users to have conversations with 
    ```
 
 6. Run the server:
+
+   ### Development Environment (Recommended)
+   ```bash
+   # Start both backend and frontend development servers
+   ./scripts/dev-start.sh
+   
+   # Check server status
+   ./scripts/status.sh
+   
+   # View logs
+   ./scripts/logs.sh
+   
+   # Stop servers
+   ./scripts/dev-stop.sh
+   
+   # Restart servers
+   ./scripts/restart.sh
+   ```
+
+   ### Manual Server Start (Alternative)
    ```bash
    # Method 1: Using Python directly
    poetry run python app.py
@@ -76,10 +96,29 @@ A roleplay chat client application that allows users to have conversations with 
    poetry run flask run --host=0.0.0.0 --port=8000
    ```
 
-   The server will be available at:
-   - Default URL: http://127.0.0.1:5000/ (Method 2)
-   - Custom URL: http://127.0.0.1:8000/ (Method 3 example)
-   - Network accessible: http://0.0.0.0:8000/ (Method 3 example)
+   ### Server URLs
+   - **Backend API**: http://127.0.0.1:5000/
+   - **API Documentation**: http://127.0.0.1:5000/api/v1/docs
+   - **Frontend App**: http://localhost:5173/ (when using dev-start.sh)
+
+   ### Production Deployment
+   ```bash
+   # Production server management
+   ./scripts/prod-start.sh
+   ./scripts/prod-stop.sh
+   ./scripts/deploy.sh
+   ```
+
+### Deployment Script Features
+
+The deployment scripts provide robust server management:
+- **Automatic dependency installation** and environment setup
+- **Graceful handling** of existing processes
+- **PID-based process management** with proper cleanup
+- **Health checks** and status monitoring
+- **Log file management** with automatic archiving
+- **Interactive restart options** for different environments
+- **Environment configuration** validation and setup
 
 ### Development Workflow
 
