@@ -194,10 +194,10 @@ fi
 if [[ -f "alembic.ini" ]]; then
     echo "Running database migrations..."
     if command -v poetry >/dev/null 2>&1; then
-        poetry run alembic upgrade head
+        FLASK_ENV=production poetry run alembic upgrade head
         echo -e "${GREEN}✓ Database migrations completed${NC}"
     elif command -v alembic >/dev/null; then
-        alembic upgrade head
+        FLASK_ENV=production alembic upgrade head
         echo -e "${GREEN}✓ Database migrations completed${NC}"
     else
         echo -e "${YELLOW}⚠ Alembic not found, skipping migrations${NC}"
