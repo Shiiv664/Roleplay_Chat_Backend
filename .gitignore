@@ -66,8 +66,15 @@ cover/
 
 # Log files
 *.log
+*.log.*
 logs/
 debug_logs/
+# Development and production log files
+backend_dev.log*
+backend_prod.log*
+frontend_dev.log*
+frontend_prod.log*
+server.log*
 
 # Environment variables
 .env
@@ -129,6 +136,10 @@ test_uploads/
 
 # Frontend build files (generated)
 frontend_build/
+
+# Process management
+pids/
+*.pid
 
 # Test data
 .test-data/
