@@ -7,7 +7,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-FRONTEND_DIR="$(cd "$PROJECT_ROOT/../Roleplay_Chat_Frontend" && pwd)"
+FRONTEND_DIR="$(cd "$PROJECT_ROOT/../frontend" && pwd)"
 
 # Colors for output
 RED='\033[0;31m'
