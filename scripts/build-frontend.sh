@@ -45,9 +45,12 @@ else
 fi
 
 echo -e "\n${BLUE}Step 2: Building frontend for production${NC}"
-# Set production mode and empty API base URL (will use same server)
+# Read Flask port from environment file
+FLASK_PORT=$(grep "^FLASK_PORT=" "$PROJECT_ROOT/.env.production" | cut -d'=' -f2 || echo "5000")
+
+# Set production mode and API base URL with correct port
 export NODE_ENV=production
-export VITE_API_BASE_URL=""
+export VITE_API_BASE_URL="http://localhost:${FLASK_PORT}"
 
 # Build the frontend
 npm run build
@@ -78,8 +81,8 @@ if [[ ! -f "frontend_build/index.html" ]]; then
 fi
 
 echo -e "\n${BLUE}Step 4: Updating frontend API configuration${NC}"
-# The frontend is built with empty VITE_API_BASE_URL, so it will use relative URLs
-echo "Frontend built with relative API URLs for production"
+# The frontend is built with VITE_API_BASE_URL pointing to the configured Flask port
+echo "Frontend built with API URLs pointing to port ${FLASK_PORT}"
 
 echo -e "\n${GREEN}✓ Frontend build completed successfully!${NC}"
 echo -e "${GREEN}✓ Files copied to: $PROJECT_ROOT/frontend_build${NC}"
