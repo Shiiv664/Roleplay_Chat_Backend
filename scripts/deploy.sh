@@ -87,6 +87,45 @@ if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null; then
     fi
 else
     echo -e "${GREEN}✓ Port $port is available${NC}"
+
+# Validate port synchronization between backend and frontend
+validate_port_sync() {
+    local backend_env=".env.production"
+    local frontend_env="../frontend/.env.production"
+    
+    # Check if frontend env file exists
+    if [[ ! -f "$frontend_env" ]]; then
+        echo -e "${YELLOW}⚠ Frontend .env.production not found, will use environment variables during build${NC}"
+        return 0
+    fi
+    
+    # Extract ports
+    local backend_port=$(grep "^FLASK_PORT=" "$backend_env" | cut -d'=' -f2 || echo "5000")
+    local frontend_url=$(grep "^VITE_API_BASE_URL=" "$frontend_env" | cut -d'=' -f2 || echo "")
+    local frontend_port=""
+    
+    if [[ -n "$frontend_url" ]]; then
+        # Extract port from URL (handles http://127.0.0.1:8548 or http://localhost:8548)
+        frontend_port=$(echo "$frontend_url" | sed -n 's/.*:\([0-9]\+\).*/\1/p')
+    fi
+    
+    # Compare ports
+    if [[ -n "$frontend_port" && "$backend_port" != "$frontend_port" ]]; then
+        echo -e "${RED}✗ Port configuration mismatch detected!${NC}"
+        echo -e "${YELLOW}Backend port (FLASK_PORT): $backend_port${NC}"
+        echo -e "${YELLOW}Frontend port (VITE_API_BASE_URL): $frontend_port${NC}"
+        echo -e "\n${BLUE}To fix this issue:${NC}"
+        echo -e "1. Update frontend .env.production: VITE_API_BASE_URL=http://127.0.0.1:$backend_port"
+        echo -e "2. Or update backend .env.production: FLASK_PORT=$frontend_port"
+        echo -e "3. Then re-run this script"
+        exit 1
+    fi
+    
+    echo -e "${GREEN}✓ Port configuration synchronized between backend and frontend${NC}"
+    return 0
+}
+
+validate_port_sync
 fi
 
 # Step 1: ARM ChromeOS Environment Setup

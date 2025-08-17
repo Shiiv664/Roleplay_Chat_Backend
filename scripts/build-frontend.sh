@@ -44,7 +44,52 @@ else
     exit 1
 fi
 
-echo -e "\n${BLUE}Step 2: Building frontend for production${NC}"
+# Port validation function
+validate_port_sync() {
+    local backend_env="$PROJECT_ROOT/.env.production"
+    local frontend_env="$FRONTEND_DIR/.env.production"
+    
+    # Check if both env files exist
+    if [[ ! -f "$backend_env" ]]; then
+        echo -e "${RED}Error: Backend .env.production not found at $backend_env${NC}"
+        exit 1
+    fi
+    
+    if [[ ! -f "$frontend_env" ]]; then
+        echo -e "${YELLOW}Warning: Frontend .env.production not found, will use VITE_API_BASE_URL from build environment${NC}"
+        return 0
+    fi
+    
+    # Extract ports
+    local backend_port=$(grep "^FLASK_PORT=" "$backend_env" | cut -d'=' -f2 || echo "5000")
+    local frontend_url=$(grep "^VITE_API_BASE_URL=" "$frontend_env" | cut -d'=' -f2 || echo "")
+    local frontend_port=""
+    
+    if [[ -n "$frontend_url" ]]; then
+        # Extract port from URL (handles http://127.0.0.1:8548 or http://localhost:8548)
+        frontend_port=$(echo "$frontend_url" | sed -n 's/.*:\([0-9]\+\).*/\1/p')
+    fi
+    
+    # Compare ports
+    if [[ -n "$frontend_port" && "$backend_port" != "$frontend_port" ]]; then
+        echo -e "${RED}✗ Port configuration mismatch detected!${NC}"
+        echo -e "${YELLOW}Backend port (FLASK_PORT): $backend_port${NC}"
+        echo -e "${YELLOW}Frontend port (VITE_API_BASE_URL): $frontend_port${NC}"
+        echo -e "\n${BLUE}To fix this issue:${NC}"
+        echo -e "1. Update frontend .env.production: VITE_API_BASE_URL=http://127.0.0.1:$backend_port"
+        echo -e "2. Or update backend .env.production: FLASK_PORT=$frontend_port"
+        echo -e "3. Then re-run this script"
+        exit 1
+    fi
+    
+    echo -e "${GREEN}✓ Port configuration validated - Backend and frontend ports are synchronized${NC}"
+    return 0
+}
+
+echo -e "\n${BLUE}Step 2: Port Configuration Validation${NC}"
+validate_port_sync
+
+echo -e "\n${BLUE}Step 3: Building frontend for production${NC}"
 # Read Flask port from environment file
 FLASK_PORT=$(grep "^FLASK_PORT=" "$PROJECT_ROOT/.env.production" | cut -d'=' -f2 || echo "5000")
 
@@ -61,7 +106,7 @@ if [[ ! -d "dist" ]]; then
     exit 1
 fi
 
-echo -e "\n${BLUE}Step 3: Copying build files to backend${NC}"
+echo -e "\n${BLUE}Step 4: Copying build files to backend${NC}"
 cd "$PROJECT_ROOT"
 
 # Remove existing frontend_build directory
@@ -80,7 +125,7 @@ if [[ ! -f "frontend_build/index.html" ]]; then
     exit 1
 fi
 
-echo -e "\n${BLUE}Step 4: Updating frontend API configuration${NC}"
+echo -e "\n${BLUE}Step 5: Updating frontend API configuration${NC}"
 # The frontend is built with VITE_API_BASE_URL pointing to the configured Flask port
 echo "Frontend built with API URLs pointing to port ${FLASK_PORT}"
 
