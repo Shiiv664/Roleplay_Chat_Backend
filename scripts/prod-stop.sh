@@ -78,7 +78,7 @@ stop_production_service
 echo -e "\n${BLUE}Cleaning up production port...${NC}"
 
 # Get production port
-local port=8080
+port=8080
 if [[ -f ".env.production" ]]; then
     port=$(grep "^FLASK_PORT=" .env.production | cut -d'=' -f2 || echo "8080")
 fi

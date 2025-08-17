@@ -144,8 +144,9 @@ pids/
 # Test data
 .test-data/
 
-# Encryption key file
-encryption.key
+# Encryption key files
+encryption*.key
+*.key
 
 # mypy
 .mypy_cache/

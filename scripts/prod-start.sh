@@ -52,7 +52,7 @@ mkdir -p pids
 
 # Function to check if port is in use
 check_port() {
-    local port=$1
+    port=$1
     if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null; then
         return 0  # Port is in use
     else
@@ -62,12 +62,12 @@ check_port() {
 
 # Check if production server is already running
 if [[ -f "pids/production.pid" ]]; then
-    local pid=$(cat pids/production.pid)
+    pid=$(cat pids/production.pid)
     if ps -p $pid > /dev/null 2>&1; then
         echo -e "${YELLOW}Production server already running (PID: $pid)${NC}"
         
         # Check what port it's using
-        local port=$(grep "^FLASK_PORT=" .env.production | cut -d'=' -f2 || echo "8080")
+        port=$(grep "^FLASK_PORT=" .env.production | cut -d'=' -f2 || echo "8080")
         echo "  URL: http://localhost:$port"
         echo "  To restart: ./scripts/restart.sh production"
         echo "  To stop: ./scripts/prod-stop.sh"
@@ -78,7 +78,7 @@ if [[ -f "pids/production.pid" ]]; then
 fi
 
 # Get production port
-local port=$(grep "^FLASK_PORT=" .env.production | cut -d'=' -f2 || echo "8080")
+port=$(grep "^FLASK_PORT=" .env.production | cut -d'=' -f2 || echo "8080")
 
 # Check if port is in use
 if check_port $port; then
@@ -110,7 +110,7 @@ fi
 
 # Check frontend files
 if [[ -f "frontend_build/index.html" ]]; then
-    local file_count=$(find frontend_build -type f | wc -l)
+    file_count=$(find frontend_build -type f | wc -l)
     echo -e "${GREEN}✓ Frontend files ready ($file_count files)${NC}"
 else
     echo -e "${RED}✗ Frontend files missing${NC}"
@@ -121,8 +121,8 @@ fi
 echo -e "\n${BLUE}Launching Flask production server...${NC}"
 
 # Use nohup for ARM ChromeOS VM compatibility
-nohup python app.py > production.log 2>&1 &
-local server_pid=$!
+nohup env FLASK_ENV=production python app.py > production.log 2>&1 &
+server_pid=$!
 echo $server_pid > pids/production.pid
 
 echo -e "${GREEN}✓ Production server started (PID: $server_pid)${NC}"
@@ -134,7 +134,7 @@ if ps -p $server_pid > /dev/null 2>&1; then
     echo -e "${GREEN}✓ Server is running successfully${NC}"
     
     # Show access information
-    local host=$(grep "^FLASK_HOST=" .env.production | cut -d'=' -f2 || echo "0.0.0.0")
+    host=$(grep "^FLASK_HOST=" .env.production | cut -d'=' -f2 || echo "0.0.0.0")
     
     echo -e "\n${GREEN}🎉 Production server is ready!${NC}"
     echo "=============================="

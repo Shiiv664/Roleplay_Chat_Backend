@@ -46,7 +46,7 @@ cd "$PROJECT_ROOT"
 
 # Check if production server is already running
 if [[ -f "pids/production.pid" ]] && ! $FORCE; then
-    local pid=$(cat pids/production.pid)
+    pid=$(cat pids/production.pid)
     if ps -p $pid > /dev/null 2>&1; then
         echo -e "${YELLOW}Production server is already running (PID: $pid)${NC}"
         echo "Options:"
@@ -119,6 +119,13 @@ fi
 # Step 4: Pre-deployment validation
 echo -e "\n${BLUE}Step 4: Pre-deployment Validation${NC}"
 
+# Activate virtual environment for validation
+if [[ -d "venv" ]]; then
+    source venv/bin/activate
+elif [[ -d ".venv" ]]; then
+    source .venv/bin/activate
+fi
+
 # Validate configuration
 if python -c "from app.config import get_config; config = get_config(); print('Production config valid')" 2>/dev/null; then
     echo -e "${GREEN}✓ Production configuration valid${NC}"
@@ -129,8 +136,8 @@ fi
 
 # Validate frontend build
 if [[ -f "frontend_build/index.html" ]]; then
-    local file_count=$(find frontend_build -type f | wc -l)
-    local build_size=$(du -sh frontend_build | cut -f1)
+    file_count=$(find frontend_build -type f | wc -l)
+    build_size=$(du -sh frontend_build | cut -f1)
     echo -e "${GREEN}✓ Frontend build valid ($file_count files, $build_size)${NC}"
 else
     echo -e "${RED}✗ Frontend build invalid${NC}"
@@ -138,7 +145,7 @@ else
 fi
 
 # Check production port availability
-local port=$(grep "^FLASK_PORT=" .env.production | cut -d'=' -f2 || echo "8080")
+port=$(grep "^FLASK_PORT=" .env.production | cut -d'=' -f2 || echo "8080")
 if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null; then
     if $FORCE; then
         echo -e "${YELLOW}⚠ Port $port in use, will attempt to start anyway (--force)${NC}"
@@ -162,7 +169,7 @@ echo -e "\n${BLUE}Step 6: Post-deployment Verification${NC}"
 sleep 5  # Give server time to fully start
 
 # Health check
-local port=$(grep "^FLASK_PORT=" .env.production | cut -d'=' -f2 || echo "8080")
+port=$(grep "^FLASK_PORT=" .env.production | cut -d'=' -f2 || echo "8080")
 if curl -s "http://localhost:$port/" > /dev/null; then
     echo -e "${GREEN}✓ Server health check passed${NC}"
 else
@@ -197,7 +204,7 @@ echo ""
 echo -e "${BLUE}Access your application:${NC}"
 echo "  http://localhost:$port"
 
-local host=$(grep "^FLASK_HOST=" .env.production | cut -d'=' -f2 || echo "0.0.0.0")
+host=$(grep "^FLASK_HOST=" .env.production | cut -d'=' -f2 || echo "0.0.0.0")
 if [[ "$host" == "0.0.0.0" ]]; then
     echo "  http://$(hostname -I | awk '{print $1}'):$port"
 fi

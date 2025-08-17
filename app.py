@@ -6,6 +6,15 @@ from pathlib import Path
 
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
+from dotenv import load_dotenv
+
+# Load environment variables early
+env = os.getenv("FLASK_ENV", "development")
+env_file = f".env.{env}"
+if Path(env_file).exists():
+    load_dotenv(env_file)
+else:
+    load_dotenv()
 
 from app.config import get_config
 from app.utils.exceptions import (
@@ -59,6 +68,38 @@ def create_app() -> Flask:
     from app.api import init_app as init_api
 
     init_api(app)
+    
+    # Register frontend routes AFTER API but BEFORE error handlers (production only)
+    if env == "production" and Path("frontend_build").exists():
+        frontend_build_path = Path("frontend_build")
+        
+        # Root route - serve React app
+        @app.route("/")
+        def serve_index():
+            """Serve React app index."""
+            return send_from_directory(str(frontend_build_path), "index.html")
+        
+        # Static assets route
+        @app.route("/assets/<path:filename>")
+        def serve_assets(filename):
+            """Serve static assets."""
+            return send_from_directory(str(frontend_build_path / "assets"), filename)
+            
+        # Catch-all route for SPA routing - serve index.html for any non-API routes
+        @app.route("/<path:filename>")
+        def serve_static_files(filename):
+            """Serve static files or index.html for SPA routing."""
+            # Skip API routes - they're handled by Flask-RESTX
+            if filename.startswith("api/"):
+                return "API endpoint not found", 404
+                
+            # Try to serve the specific file first
+            file_path = frontend_build_path / filename
+            if file_path.exists() and file_path.is_file():
+                return send_from_directory(str(frontend_build_path), filename)
+            
+            # For any other route (SPA routes like /characters, /user-profiles), serve index.html
+            return send_from_directory(str(frontend_build_path), "index.html")
 
     # Configure static file serving for uploads
     UPLOAD_FOLDER = Path("uploads")
@@ -136,31 +177,10 @@ def create_app() -> Flask:
         }
         return jsonify(response), 500
 
-    # Frontend serving routes (production only)
+    # Development vs Production frontend handling
     if env == "production" and Path("frontend_build").exists():
-        @app.route("/", defaults={"path": ""})
-        @app.route("/<path:path>")
-        def serve_frontend(path):
-            """Serve React frontend files in production."""
-            # API routes are handled by Flask-RESTX
-            if path.startswith("api/"):
-                return "API endpoint not found", 404
-                
-            # Serve static files
-            frontend_build_path = Path("frontend_build")
-            
-            # If path is empty or doesn't exist, serve index.html (SPA routing)
-            if not path or not (frontend_build_path / path).exists():
-                try:
-                    return send_from_directory(str(frontend_build_path), "index.html")
-                except FileNotFoundError:
-                    return "Frontend files not found", 404
-            
-            # Serve the requested file
-            try:
-                return send_from_directory(str(frontend_build_path), path)
-            except FileNotFoundError:
-                return "File not found", 404
+        # Routes already registered above
+        pass
     else:
         # Development mode - API only
         @app.route("/")
