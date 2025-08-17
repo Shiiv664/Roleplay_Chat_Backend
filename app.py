@@ -1,6 +1,7 @@
 """Main application entry point."""
 
 import logging
+import os
 from pathlib import Path
 
 from flask import Flask, jsonify, request, send_from_directory
@@ -26,7 +27,19 @@ def create_app() -> Flask:
     Returns:
         Flask: The configured Flask application instance.
     """
-    app = Flask(__name__)
+    # In production, serve React static files
+    env = os.getenv("FLASK_ENV", "development")
+    if env == "production":
+        # Set static folder to frontend build directory
+        frontend_build_path = Path("frontend_build")
+        if frontend_build_path.exists():
+            app = Flask(__name__, static_folder=str(frontend_build_path), static_url_path="/")
+        else:
+            app = Flask(__name__)
+            print("Warning: frontend_build directory not found for production static files")
+    else:
+        app = Flask(__name__)
+    
     app.config.from_object(get_config())
 
     # Initialize CORS
@@ -123,21 +136,53 @@ def create_app() -> Flask:
         }
         return jsonify(response), 500
 
-    # Root route
-    @app.route("/")
-    def index():
-        """Index route for the application."""
-        return jsonify(
-            {
-                "app": "LLM Roleplay Chat Client API",
-                "version": "1.0.0",
-                "api_docs": "/api/v1/docs",
-            }
-        )
+    # Frontend serving routes (production only)
+    if env == "production" and Path("frontend_build").exists():
+        @app.route("/", defaults={"path": ""})
+        @app.route("/<path:path>")
+        def serve_frontend(path):
+            """Serve React frontend files in production."""
+            # API routes are handled by Flask-RESTX
+            if path.startswith("api/"):
+                return "API endpoint not found", 404
+                
+            # Serve static files
+            frontend_build_path = Path("frontend_build")
+            
+            # If path is empty or doesn't exist, serve index.html (SPA routing)
+            if not path or not (frontend_build_path / path).exists():
+                try:
+                    return send_from_directory(str(frontend_build_path), "index.html")
+                except FileNotFoundError:
+                    return "Frontend files not found", 404
+            
+            # Serve the requested file
+            try:
+                return send_from_directory(str(frontend_build_path), path)
+            except FileNotFoundError:
+                return "File not found", 404
+    else:
+        # Development mode - API only
+        @app.route("/")
+        def index():
+            """Index route for the application."""
+            return jsonify(
+                {
+                    "app": "LLM Roleplay Chat Client API",
+                    "version": "1.0.0",
+                    "api_docs": "/api/v1/docs",
+                    "mode": "development",
+                    "frontend": "served separately on port 5173"
+                }
+            )
 
     return app
 
 
 if __name__ == "__main__":
     app = create_app()
-    app.run(host="0.0.0.0", port=5000, debug=app.config.get("DEBUG", False))
+    app.run(
+        host=app.config.get("HOST", "127.0.0.1"),
+        port=app.config.get("PORT", 5000),
+        debug=app.config.get("DEBUG", False)
+    )

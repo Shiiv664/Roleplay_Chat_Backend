@@ -78,3 +78,20 @@ def get_db_session() -> Generator[Session, None, None]:
         raise
     finally:
         session.close()
+
+
+def check_db_connection() -> bool:
+    """Check if database connection is working.
+    
+    Returns:
+        True if connection is successful, False otherwise.
+    """
+    try:
+        # Try a simple query
+        with session_scope() as session:
+            result = session.execute("SELECT 1")
+            result.close()
+            return True
+    except Exception as e:
+        print(f"Database connection failed: {e}")
+        return False

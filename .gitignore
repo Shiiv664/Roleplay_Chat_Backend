@@ -127,6 +127,9 @@ instance/
 uploads/
 test_uploads/
 
+# Frontend build files (generated)
+frontend_build/
+
 # Test data
 .test-data/
 
