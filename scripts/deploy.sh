@@ -62,6 +62,18 @@ fi
 
 echo -e "${YELLOW}Starting deployment process...${NC}"
 
+# Step 0: ARM ChromeOS Environment Setup
+echo -e "\n${BLUE}Step 0: ARM ChromeOS Environment Check${NC}"
+if [[ -f "$SCRIPT_DIR/arm-chromeos-setup.sh" ]]; then
+    "$SCRIPT_DIR/arm-chromeos-setup.sh" --check-only
+    if [[ $? -ne 0 ]]; then
+        echo -e "${YELLOW}ARM ChromeOS optimizations needed. Running setup...${NC}"
+        "$SCRIPT_DIR/arm-chromeos-setup.sh"
+    fi
+else
+    echo -e "${YELLOW}⚠ ARM ChromeOS setup script not found, continuing without optimizations${NC}"
+fi
+
 # Step 1: Setup production environment
 echo -e "\n${BLUE}Step 1: Environment Setup${NC}"
 if [[ ! -f ".env.production" ]]; then
@@ -88,27 +100,37 @@ fi
 # Step 3: Prepare production environment
 echo -e "\n${BLUE}Step 3: Production Preparation${NC}"
 
-# Install/update Python dependencies if needed
-if [[ -f "requirements.txt" ]]; then
+# Install Python dependencies using Poetry (recommended) or pip fallback
+if [[ -f "pyproject.toml" ]] && command -v poetry >/dev/null 2>&1; then
+    echo "Installing Python dependencies with Poetry..."
+    poetry install --only=main
+    echo -e "${GREEN}✓ Poetry dependencies installed${NC}"
+elif [[ -f "requirements.txt" ]]; then
+    # Fallback to pip if Poetry not available
     if [[ -d "venv" ]]; then
         source venv/bin/activate
-        echo "Checking Python dependencies..."
+        echo "Checking Python dependencies with pip..."
         pip install -r requirements.txt --quiet
         echo -e "${GREEN}✓ Python dependencies updated${NC}"
     elif [[ -d ".venv" ]]; then
         source .venv/bin/activate
-        echo "Checking Python dependencies..."
+        echo "Checking Python dependencies with pip..."
         pip install -r requirements.txt --quiet
         echo -e "${GREEN}✓ Python dependencies updated${NC}"
     else
         echo -e "${YELLOW}⚠ No virtual environment found${NC}"
     fi
+else
+    echo -e "${YELLOW}⚠ No pyproject.toml or requirements.txt found${NC}"
 fi
 
 # Run database migrations if using Alembic
 if [[ -f "alembic.ini" ]]; then
     echo "Running database migrations..."
-    if command -v alembic >/dev/null; then
+    if command -v poetry >/dev/null 2>&1; then
+        poetry run alembic upgrade head
+        echo -e "${GREEN}✓ Database migrations completed${NC}"
+    elif command -v alembic >/dev/null; then
         alembic upgrade head
         echo -e "${GREEN}✓ Database migrations completed${NC}"
     else
