@@ -94,14 +94,14 @@ echo -e "\n${BLUE}Starting production server...${NC}"
 echo "Performing pre-start validation..."
 
 # Check database
-if python -c "from app.utils.db import check_db_connection; check_db_connection()" 2>/dev/null; then
+if poetry run python -c "from app.utils.db import check_db_connection; check_db_connection()" 2>/dev/null; then
     echo -e "${GREEN}✓ Database connection successful${NC}"
 else
     echo -e "${YELLOW}⚠ Database check failed, will initialize on start${NC}"
 fi
 
 # Check environment variables
-if python -c "from app.config import get_config; config = get_config(); print('Config loaded successfully')" 2>/dev/null; then
+if poetry run python -c "from app.config import get_config; config = get_config(); print('Config loaded successfully')" 2>/dev/null; then
     echo -e "${GREEN}✓ Configuration loaded successfully${NC}"
 else
     echo -e "${RED}✗ Configuration failed to load${NC}"
@@ -117,11 +117,26 @@ else
     exit 1
 fi
 
+# Check database state and run migrations if needed
+if [[ -f "alembic.ini" ]]; then
+    echo "Checking database state..."
+    if poetry run python -c "from app.utils.db import check_db_connection; check_db_connection()" 2>/dev/null; then
+        echo -e "${GREEN}✓ Database is properly initialized${NC}"
+    else
+        echo "Database needs initialization, running migrations..."
+        if poetry run alembic upgrade head 2>/dev/null; then
+            echo -e "${GREEN}✓ Database migrations completed${NC}"
+        else
+            echo -e "${YELLOW}⚠ Database migrations failed${NC}"
+        fi
+    fi
+fi
+
 # Start the production server
 echo -e "\n${BLUE}Launching Flask production server...${NC}"
 
 # Use nohup for ARM ChromeOS VM compatibility
-nohup env FLASK_ENV=production python app.py > production.log 2>&1 &
+nohup env FLASK_ENV=production poetry run python app.py > production.log 2>&1 &
 server_pid=$!
 echo $server_pid > pids/production.pid
 

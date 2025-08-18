@@ -86,7 +86,7 @@ fi
 # Kill processes on production port
 if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null; then
     echo "Killing remaining processes on port $port..."
-    lsof -Ti :$port | xargs kill -9 2>/dev/null || true
+    lsof -t -i :$port | xargs kill -9 2>/dev/null || true
     sleep 1
 fi
 
@@ -104,7 +104,7 @@ if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null; then
     lsof -Pi :$port -sTCP:LISTEN
     echo ""
     echo "You may need to manually kill the process:"
-    echo "  sudo lsof -Ti :$port | xargs sudo kill -9"
+    echo "  sudo lsof -t -i :$port | xargs sudo kill -9"
 else
     echo -e "${GREEN}✓ Port $port is now available${NC}"
 fi

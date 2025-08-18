@@ -7,7 +7,14 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-FRONTEND_DIR="$(cd "$PROJECT_ROOT/../Roleplay_Chat_Frontend" && pwd)"
+
+# Discover frontend directory with fallback logic
+FRONTEND_DIR=""
+if [[ -d "$PROJECT_ROOT/../frontend" ]]; then
+    FRONTEND_DIR="$(cd "$PROJECT_ROOT/../frontend" && pwd)"
+elif [[ -d "$PROJECT_ROOT/../Roleplay_Chat_Frontend" ]]; then
+    FRONTEND_DIR="$(cd "$PROJECT_ROOT/../Roleplay_Chat_Frontend" && pwd)"
+fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -65,7 +72,7 @@ cd "$PROJECT_ROOT"
 stop_service "Backend" "pids/backend.pid" "backend_dev.log"
 
 # Stop frontend
-if [[ -d "$FRONTEND_DIR" ]]; then
+if [[ -n "$FRONTEND_DIR" ]] && [[ -d "$FRONTEND_DIR" ]]; then
     cd "$FRONTEND_DIR"
     stop_service "Frontend" "pids/frontend.pid" "frontend_dev.log"
 fi
@@ -76,13 +83,13 @@ echo -e "\n${BLUE}Cleaning up development ports...${NC}"
 # Kill processes on port 5000 (backend)
 if lsof -Pi :5000 -sTCP:LISTEN -t >/dev/null; then
     echo "Killing remaining processes on port 5000..."
-    lsof -Ti :5000 | xargs kill -9 2>/dev/null || true
+    lsof -t -i :5000 | xargs kill -9 2>/dev/null || true
 fi
 
 # Kill processes on port 5173 (frontend)
 if lsof -Pi :5173 -sTCP:LISTEN -t >/dev/null; then
     echo "Killing remaining processes on port 5173..."
-    lsof -Ti :5173 | xargs kill -9 2>/dev/null || true
+    lsof -t -i :5173 | xargs kill -9 2>/dev/null || true
 fi
 
 # Kill any remaining node processes related to vite

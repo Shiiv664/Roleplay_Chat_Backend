@@ -7,7 +7,14 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-FRONTEND_DIR="$(cd "$PROJECT_ROOT/../Roleplay_Chat_Frontend" && pwd)"
+
+# Discover frontend directory with fallback logic
+FRONTEND_DIR=""
+if [[ -d "$PROJECT_ROOT/../frontend" ]]; then
+    FRONTEND_DIR="$(cd "$PROJECT_ROOT/../frontend" && pwd)"
+elif [[ -d "$PROJECT_ROOT/../Roleplay_Chat_Frontend" ]]; then
+    FRONTEND_DIR="$(cd "$PROJECT_ROOT/../Roleplay_Chat_Frontend" && pwd)"
+fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -31,8 +38,10 @@ if [[ ! -f ".env.development" ]]; then
 fi
 
 # Check if frontend directory exists
-if [[ ! -d "$FRONTEND_DIR" ]]; then
-    echo -e "${RED}Error: Frontend directory not found at $FRONTEND_DIR${NC}"
+if [[ -z "$FRONTEND_DIR" ]] || [[ ! -d "$FRONTEND_DIR" ]]; then
+    echo -e "${RED}Error: Frontend directory not found${NC}"
+    echo "Looked for: ../frontend and ../Roleplay_Chat_Frontend"
+    echo "Make sure the frontend is cloned in the same parent directory as the backend"
     exit 1
 fi
 
@@ -116,7 +125,7 @@ start_backend() {
     
     # Start backend in background
     export FLASK_ENV=development
-    nohup python app.py > backend_dev.log 2>&1 &
+    nohup poetry run python app.py > backend_dev.log 2>&1 &
     local backend_pid=$!
     echo $backend_pid > pids/backend.pid
     

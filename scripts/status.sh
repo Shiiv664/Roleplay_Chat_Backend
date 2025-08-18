@@ -7,7 +7,14 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-FRONTEND_DIR="$(cd "$PROJECT_ROOT/../Roleplay_Chat_Frontend" && pwd)"
+
+# Discover frontend directory with fallback logic
+FRONTEND_DIR=""
+if [[ -d "$PROJECT_ROOT/../frontend" ]]; then
+    FRONTEND_DIR="$(cd "$PROJECT_ROOT/../frontend" && pwd)"
+elif [[ -d "$PROJECT_ROOT/../Roleplay_Chat_Frontend" ]]; then
+    FRONTEND_DIR="$(cd "$PROJECT_ROOT/../Roleplay_Chat_Frontend" && pwd)"
+fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -163,14 +170,14 @@ show_recent_logs() {
 case "${1:-}" in
     "dev"|"development")
         check_service "Development Backend" "pids/backend.pid" "5000" "http://localhost:5000"
-        if [[ -d "$FRONTEND_DIR" ]]; then
+        if [[ -n "$FRONTEND_DIR" ]] && [[ -d "$FRONTEND_DIR" ]]; then
             cd "$FRONTEND_DIR"
             check_service "Development Frontend" "pids/frontend.pid" "5173" "http://localhost:5173"
             cd "$PROJECT_ROOT"
         fi
         ;;
     "prod"|"production")
-        local port=$(grep "^FLASK_PORT=" .env.production 2>/dev/null | cut -d'=' -f2 || echo "8080")
+        port=$(grep "^FLASK_PORT=" .env.production 2>/dev/null | cut -d'=' -f2 || echo "8080")
         check_service "Production Server" "pids/production.pid" "$port" "http://localhost:$port"
         ;;
     "")
@@ -180,14 +187,14 @@ case "${1:-}" in
         # Development services
         check_service "Development Backend" "pids/backend.pid" "5000" "http://localhost:5000"
         
-        if [[ -d "$FRONTEND_DIR" ]]; then
+        if [[ -n "$FRONTEND_DIR" ]] && [[ -d "$FRONTEND_DIR" ]]; then
             cd "$FRONTEND_DIR"
             check_service "Development Frontend" "pids/frontend.pid" "5173" "http://localhost:5173"
             cd "$PROJECT_ROOT"
         fi
         
         # Production service
-        local port=$(grep "^FLASK_PORT=" .env.production 2>/dev/null | cut -d'=' -f2 || echo "8080")
+        port=$(grep "^FLASK_PORT=" .env.production 2>/dev/null | cut -d'=' -f2 || echo "8080")
         check_service "Production Server" "pids/production.pid" "$port" "http://localhost:$port"
         
         # Environment info

@@ -156,7 +156,7 @@ quick_restart_production() {
         source .venv/bin/activate
     fi
     
-    nohup python app.py > production.log 2>&1 &
+    nohup poetry run python app.py > production.log 2>&1 &
     local server_pid=$!
     echo $server_pid > pids/production.pid
     
