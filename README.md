@@ -109,6 +109,49 @@ A roleplay chat client application that allows users to have conversations with 
    ./scripts/deploy.sh
    ```
 
+## Quick Deployment
+
+Deploy the complete roleplay chat application in 4 simple steps:
+
+1. **Clone repositories**:
+   ```bash
+   # Choose your deployment directory
+   mkdir -p ~/roleplay-chat && cd ~/roleplay-chat
+   
+   # Clone both repositories
+   git clone https://github.com/Shiiv664/Roleplay_Chat_Backend.git backend
+   git clone https://github.com/Shiiv664/Roleplay_Chat_Frontend.git frontend
+   ```
+
+2. **Configure environment files**:
+   ```bash
+   # Backend: Edit production environment settings
+   cd backend
+   # Edit .env.production with your settings (port, database, etc.)
+   
+   # Frontend: Configure API endpoint  
+   cd ../frontend
+   # Edit .env.production with your backend API URL
+   ```
+
+3. **Setup and deploy**:
+   ```bash
+   cd ../backend
+   ./scripts/setup-environment.sh production
+   # When prompted "Generate missing keys automatically? (y/n):", type 'y'
+   
+   ./scripts/deploy.sh
+   ```
+
+4. **Verify**:
+   ```bash
+   # Check if deployment succeeded (replace 8547 with your configured port)
+   curl -s http://localhost:8547/ | head -5
+   curl -s http://localhost:8547/api/v1/docs | head -5
+   ```
+
+The deploy script automatically handles dependency installation, frontend building, database initialization, and server startup.
+
 ### Deployment Script Features
 
 The deployment scripts provide robust server management:
