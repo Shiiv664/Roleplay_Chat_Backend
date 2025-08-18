@@ -74,15 +74,27 @@ class EncryptionService:
                 with open(env_file_path, "r") as f:
                     content = f.read()
                 
-                # Check if ENCRYPTION_KEY already exists (empty value)
-                if "ENCRYPTION_KEY=" in content:
-                    # Replace empty ENCRYPTION_KEY= with the generated key
-                    content = content.replace("ENCRYPTION_KEY=", f"ENCRYPTION_KEY={key_str}")
-                else:
+                # Check if ENCRYPTION_KEY already exists
+                lines = content.split('\n')
+                encryption_key_found = False
+                
+                for i, line in enumerate(lines):
+                    if line.strip().startswith("ENCRYPTION_KEY="):
+                        # Check if it's empty or already has a value
+                        if line.strip() == "ENCRYPTION_KEY=" or not line.split('=', 1)[1].strip():
+                            # Replace empty ENCRYPTION_KEY line with the generated key
+                            lines[i] = f"ENCRYPTION_KEY={key_str}"
+                            encryption_key_found = True
+                            break
+                        else:
+                            # Key already exists and has a value, don't replace
+                            return line.split('=', 1)[1].strip()
+                
+                if not encryption_key_found:
                     # Append the key
-                    if not content.endswith("\n"):
-                        content += "\n"
-                    content += f"ENCRYPTION_KEY={key_str}\n"
+                    lines.append(f"ENCRYPTION_KEY={key_str}")
+                
+                content = '\n'.join(lines)
                 
                 # Write back to file
                 with open(env_file_path, "w") as f:

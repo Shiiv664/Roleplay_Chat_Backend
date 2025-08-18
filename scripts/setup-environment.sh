@@ -101,15 +101,8 @@ setup_environment() {
     # Handle empty keys
     if [[ ${#empty_keys[@]} -gt 0 ]]; then
         echo -e "${YELLOW}⚠ Empty security keys detected: ${empty_keys[*]}${NC}"
-        read -p "Generate missing keys automatically? (y/n): " generate_keys
-        
-        if [[ "$generate_keys" =~ ^[Yy]$ ]]; then
-            echo "Generating keys..."
-            "$SCRIPT_DIR/generate-encryption-key.sh" "$env"
-        else
-            echo -e "${YELLOW}⚠ Keys not generated. You can generate them later with:${NC}"
-            echo "  ./scripts/generate-encryption-key.sh $env"
-        fi
+        echo "Generating keys automatically..."
+        "$SCRIPT_DIR/generate-encryption-key.sh" "$env"
     else
         echo -e "${GREEN}✓ All security keys present${NC}"
     fi

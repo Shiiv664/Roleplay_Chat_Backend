@@ -138,7 +138,6 @@ Deploy the complete roleplay chat application in 4 simple steps:
    ```bash
    cd ../backend
    ./scripts/setup-environment.sh production
-   # When prompted "Generate missing keys automatically? (y/n):", type 'y'
    
    ./scripts/deploy.sh
    ```
